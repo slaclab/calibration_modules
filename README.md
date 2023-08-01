@@ -1,2 +1,3 @@
-# calibration_modules
-Defines functionality to calibrate PyTorch Models
+# Calibration Modules
+
+Provides some functionality to perform calibration of a pre-existing PyTorch model, i.e., a `torch.nn.Module`.
