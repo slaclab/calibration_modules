@@ -1,0 +1,10 @@
+# conda env create -f environment.yml
+name: calibration-modules
+channels:
+  - pytorch
+  - conda-forge
+dependencies:
+  - python=3.9
+  - gpytorch>=1.10
+  - ipywidgets
+  - tqdm
