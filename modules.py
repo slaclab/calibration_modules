@@ -55,17 +55,11 @@ class InputOffset(BaseModule):
 
     @property
     def x_offset(self):
-        return self._x_offset_param(self)
+        return self._param("x_offset", self)
 
     @x_offset.setter
     def x_offset(self, value):
         self._x_offset_closure(self, value)
-
-    def _x_offset_param(self, m):
-        return self._param("x_offset", m)
-
-    def _x_offset_closure(self, m, value):
-        self._closure("x_offset", m, value)
 
     def input_offset(self, x):
         return x + self.x_offset
@@ -125,17 +119,11 @@ class InputScale(BaseModule):
 
     @property
     def x_scale(self):
-        return self._x_scale_param(self)
+        return self._param("x_scale", self)
 
     @x_scale.setter
     def x_scale(self, value):
         self._x_scale_closure(self, value)
-
-    def _x_scale_param(self, m):
-        return self._param("x_scale", m)
-
-    def _x_scale_closure(self, m, value):
-        self._closure("x_scale", m, value)
 
     def input_scale(self, x):
         return self.x_scale * x
@@ -226,17 +214,11 @@ class OutputOffset(BaseModule):
 
     @property
     def y_offset(self):
-        return self._y_offset_param(self)
+        return self._param("y_offset", self)
 
     @y_offset.setter
     def y_offset(self, value):
         self._y_offset_closure(self, value)
-
-    def _y_offset_param(self, m):
-        return self._param("y_offset", m)
-
-    def _y_offset_closure(self, m, value):
-        self._closure("y_offset", m, value)
 
     def output_offset(self, y):
         return y + self.y_offset
@@ -296,17 +278,11 @@ class OutputScale(BaseModule):
 
     @property
     def y_scale(self):
-        return self._y_scale_param(self)
+        return self._param("y_scale", self)
 
     @y_scale.setter
     def y_scale(self, value):
         self._y_scale_closure(self, value)
-
-    def _y_scale_param(self, m):
-        return self._param("y_scale", m)
-
-    def _y_scale_closure(self, m, value):
-        self._closure("y_scale", m, value)
 
     def output_scale(self, y):
         return self.y_scale * y
