@@ -60,8 +60,8 @@ class BaseModule(Module, ABC):
             prior: Prior to be placed on the parameter.
         """
         if prior is not None:
-            self.register_prior(f"{name}_prior", prior, getattr(self, f"_{name}_param"),
-                                getattr(self, f"_{name}_closure"))
+            self.register_prior(f"{name}_prior", prior, lambda m: self._param(name, m),
+                                lambda m, value: self._closure(name, m, value))
 
     def _register_constraint(self, name: str, constraint: Interval):
         """Registers the constraint for the named parameter.
