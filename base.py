@@ -1,5 +1,5 @@
-from abc import ABC, abstractmethod
-from typing import Optional, Union
+from abc import ABC
+from typing import Dict, List, Optional, Tuple, Union
 
 import torch
 from gpytorch.priors import Prior
@@ -13,7 +13,7 @@ class BaseModule(Module, ABC):
             model: torch.nn.Module,
             **kwargs,
     ):
-        """Base module for calibration.
+        """Abstract base module for calibration.
 
         Args:
             model: The model to be calibrated.
@@ -21,41 +21,60 @@ class BaseModule(Module, ABC):
         super().__init__()
         self.model = model
 
-    @staticmethod
-    def _get_size(name: str, **kwargs) -> int:
-        """Infers parameter size from given keyword arguments.
+    def forward(self, x):
+        raise NotImplementedError()
 
-        If no size but a fixed value is given, the length of the value is returned. If both are None, the
-        returned size is 1.
+
+class ParameterModule(BaseModule, ABC):
+    def __init__(
+            self,
+            model: torch.nn.Module,
+            parameter_names: Optional[List[str]],
+            **kwargs,
+    ):
+        """Abstract module providing the functionality to register parameters with a prior and/or constraint.
 
         Args:
-            name: Name of the parameter.
+            model: The model to be calibrated.
+            parameter_names: A list of parameters to initialize.
 
         Keyword Args:
-            {name}_size: Size of the named parameter. Defaults to None.
-            {name}_fixed: Optional fixed parameter value. Defaults to None.
+            {parameter_name}_size (Union[int, Tuple[int]]): Size of the named parameter. Defaults to 1.
+            {parameter_name}_value (Optional[Union[[float, torch.Tensor]]): Initial value(s) of the named
+              parameter. Defaults to zero(s).
+            {parameter_name}_prior (Optional[Prior]): Prior on named parameter. Defaults to None.
+            {parameter_name}_constraint (Optional[Interval]): Constraint on named parameter. Defaults to None.
 
-        Returns:
-            The parameter size to use.
+        Attributes:
+            raw_{parameter_name} (torch.nn.Parameter): Unconstrained parameter tensor.
         """
-        size = kwargs.get(f"{name}_size")
-        fixed_value = kwargs.get(f"{name}_fixed")
-        if size is None:
-            if fixed_value is not None:
-                size = len(fixed_value)
-            else:
-                size = 1
-        return size
+        super().__init__(model, **kwargs)
+        self.model = model
+        for name in parameter_names:
+            self._initialize_parameter(
+                name=name,
+                size=kwargs.get(f"{name}_size", 1),
+                value=kwargs.get(f"{name}_value", 0.0),
+                prior=kwargs.get(f"{name}_prior"),
+                constraint=kwargs.get(f"{name}_constraint"),
+            )
 
-    def _register_parameter(self, name: str, size: int, initial_value: Optional[float] = 0.0):
+    def _register_parameter(self, name: str, size: Union[int, Tuple[int]], value: Union[float, torch.Tensor]):
         """Registers the named parameter with prefix "raw_" to allow for constraints.
 
         Args:
             name: Name of the parameter.
             size: Size of the parameter.
-            initial_value: Initial value of the parameter.
+            value: Initial value of the parameter.
         """
-        self.register_parameter(f"raw_{name}", torch.nn.Parameter(initial_value * torch.ones(size)))
+        if not isinstance(value, torch.Tensor):
+            value = float(value) * torch.ones(size)
+        value_size = value.shape
+        if value.dim() == 1:
+            value_size = value.shape[0]
+        if not size == value_size:
+            raise ValueError(f"Initial value tensor does not match given size of {size}!")
+        self.register_parameter(f"raw_{name}", torch.nn.Parameter(value))
 
     def _register_prior(self, name: str, prior: Optional[Prior]):
         """Registers the prior for the named parameter.
@@ -68,7 +87,7 @@ class BaseModule(Module, ABC):
             self.register_prior(f"{name}_prior", prior, lambda m: self._param(name, m),
                                 lambda m, value: self._closure(name, m, value))
 
-    def _register_constraint(self, name: str, constraint: Interval):
+    def _register_constraint(self, name: str, constraint: Optional[Interval]):
         """Registers the constraint for the named parameter.
 
         Args:
@@ -80,14 +99,14 @@ class BaseModule(Module, ABC):
 
     @staticmethod
     def _param(name: str, m: Module) -> Union[torch.nn.Parameter, torch.Tensor]:
-        """Returns the named parameter transformed according to existing constraints.
+        """Returns the named parameter transformed according to the constraint.
 
         Args:
             name: Name of the parameter.
             m: Module for which the parameter shall be returned.
 
         Returns:
-            The parameter transformed according to existing constraints.
+            The parameter transformed according to the constraint.
         """
         raw_parameter = getattr(m, f"raw_{name}")
         if hasattr(m, f"raw_{name}_constraint"):
@@ -97,7 +116,7 @@ class BaseModule(Module, ABC):
 
     @staticmethod
     def _closure(name: str, m: Module, value: Union[float, torch.Tensor]):
-        """Sets the named parameter of the module to the given value considering existing constraints.
+        """Sets the named parameter of the module to the given value considering the constraint.
 
         Args:
             name: Name of the parameter.
@@ -112,44 +131,38 @@ class BaseModule(Module, ABC):
         else:
             m.initialize(**{f"raw_{name}": value})
 
-    def _init_parameter(
+    @staticmethod
+    def _add_parameter_name_to_kwargs(name: str, kwargs: Dict):
+        parameter_names = kwargs.get("parameter_names")
+        if parameter_names is not None:
+            if name in parameter_names:
+                raise ValueError(f"Parameter {name} already exists!")
+            parameter_names.append(name)
+        else:
+            parameter_names = [name]
+        kwargs["parameter_names"] = parameter_names
+
+    def _initialize_parameter(
             self,
             name: str,
-            size: int,
-            initial_value: float,
-            default_prior: Optional[Prior] = None,
-            default_constraint: Optional[Interval] = None,
-            **kwargs,
+            size: Union[int, Tuple[int]],
+            value: Union[float, torch.Tensor],
+            prior: Optional[Prior] = None,
+            constraint: Optional[Interval] = None,
     ):
         """Initializes the named parameter.
 
         Args:
             name: Name of the parameter.
             size: Size of the named parameter.
-            initial_value: Initial value of the named parameter.
-            default_prior: Default prior on the named parameter.
-            default_constraint: Default constraint on the named parameter.
-
-        Keyword Args:
-            {name}_fixed: Optional fixed value for the named parameter. Defaults to None.
-            {name}_prior: Prior on the named parameter. Defaults to default_prior.
-            {name}_constraint: Constraint on the named parameter. Defaults to default_constraint.
+            value: Initial value of the named parameter.
+            prior: Prior on the named parameter.
+            constraint: Constraint on the named parameter.
         """
-        fixed_value = kwargs.get(f"{name}_fixed")
-        self._register_parameter(name, size, initial_value=initial_value)
-        # prior
-        prior = kwargs.get(f"{name}_prior", default_prior)
+        self._register_parameter(name, size, value=value)
         self._register_prior(name, prior)
-        # constraint
-        constraint = kwargs.get(f"{name}_constraint", default_constraint)
         self._register_constraint(name, constraint)
-        # fixed value
-        if fixed_value is not None:
-            self._closure(name, self, fixed_value)
-            getattr(self, f"raw_{name}").requires_grad = False
-        else:
-            self._closure(name, self, initial_value)
+        self._closure(name, self, value)
 
-    @abstractmethod
     def forward(self, x):
-        pass
+        raise NotImplementedError()
