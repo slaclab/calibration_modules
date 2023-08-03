@@ -13,7 +13,7 @@ class BaseModule(Module, ABC):
             model: torch.nn.Module,
             **kwargs,
     ):
-        """Custom prior mean for a GP based on an arbitrary model.
+        """Base module for calibration.
 
         Args:
             model: The model to be calibrated.
@@ -22,19 +22,24 @@ class BaseModule(Module, ABC):
         self.model = model
 
     @staticmethod
-    def _get_size(size: Optional[int], fixed_value: Optional[Union[float, torch.Tensor]]) -> int:
-        """Infers parameter size from given size and fixed value.
+    def _get_size(name: str, **kwargs) -> int:
+        """Infers parameter size from given keyword arguments.
 
-        If size is None and fixed_value is not, the length of fixed_value is returned. If both arguments
-        are None, the returned size is 1.
+        If no size but a fixed value is given, the length of the value is returned. If both are None, the
+        returned size is 1.
 
         Args:
-            size: The given size.
-            fixed_value: The given fixed value.
+            name: Name of the parameter.
+
+        Keyword Args:
+            {name}_size: Size of the named parameter. Defaults to None.
+            {name}_fixed: Optional fixed parameter value. Defaults to None.
 
         Returns:
             The parameter size to use.
         """
+        size = kwargs.get(f"{name}_size")
+        fixed_value = kwargs.get(f"{name}_fixed")
         if size is None:
             if fixed_value is not None:
                 size = len(fixed_value)
@@ -74,7 +79,7 @@ class BaseModule(Module, ABC):
             self.register_constraint(f"raw_{name}", constraint)
 
     @staticmethod
-    def _param(name: str, m: torch.nn.Module) -> Union[torch.nn.Parameter, torch.Tensor]:
+    def _param(name: str, m: Module) -> Union[torch.nn.Parameter, torch.Tensor]:
         """Returns the named parameter transformed according to existing constraints.
 
         Args:
@@ -91,7 +96,7 @@ class BaseModule(Module, ABC):
         return raw_parameter
 
     @staticmethod
-    def _closure(name: str, m: torch.nn.Module, value: Union[float, torch.Tensor]):
+    def _closure(name: str, m: Module, value: Union[float, torch.Tensor]):
         """Sets the named parameter of the module to the given value considering existing constraints.
 
         Args:
@@ -106,6 +111,44 @@ class BaseModule(Module, ABC):
             m.initialize(**{f"raw_{name}": constraint.inverse_transform(value)})
         else:
             m.initialize(**{f"raw_{name}": value})
+
+    def _init_parameter(
+            self,
+            name: str,
+            size: int,
+            initial_value: float,
+            default_prior: Optional[Prior] = None,
+            default_constraint: Optional[Interval] = None,
+            **kwargs,
+    ):
+        """Initializes the named parameter.
+
+        Args:
+            name: Name of the parameter.
+            size: Size of the named parameter.
+            initial_value: Initial value of the named parameter.
+            default_prior: Default prior on the named parameter.
+            default_constraint: Default constraint on the named parameter.
+
+        Keyword Args:
+            {name}_fixed: Optional fixed value for the named parameter. Defaults to None.
+            {name}_prior: Prior on the named parameter. Defaults to default_prior.
+            {name}_constraint: Constraint on the named parameter. Defaults to default_constraint.
+        """
+        fixed_value = kwargs.get(f"{name}_fixed")
+        self._register_parameter(name, size, initial_value=initial_value)
+        # prior
+        prior = kwargs.get(f"{name}_prior", default_prior)
+        self._register_prior(name, prior)
+        # constraint
+        constraint = kwargs.get(f"{name}_constraint", default_constraint)
+        self._register_constraint(name, constraint)
+        # fixed value
+        if fixed_value is not None:
+            self._closure(name, self, fixed_value)
+            getattr(self, f"raw_{name}").requires_grad = False
+        else:
+            self._closure(name, self, initial_value)
 
     @abstractmethod
     def forward(self, x):

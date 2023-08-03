@@ -25,7 +25,7 @@ class InputOffset(BaseModule):
             x_offset_prior (Optional[Prior]): Prior on x_offset parameter. Defaults to a Normal distribution.
             x_offset_constraint (Optional[Interval]): Constraint on x_offset parameter. Defaults to None.
             x_offset_fixed (Union[float, torch.Tensor]): Provides the option to use a fixed parameter value.
-              Defaults to None.
+              If not None, gradient computation is deactivated. Defaults to None.
 
         Attributes:
             raw_x_offset (torch.nn.Parameter): Unconstrained parameter tensor.
@@ -33,25 +33,15 @@ class InputOffset(BaseModule):
         """
         super().__init__(model, **kwargs)
         name = "x_offset"
-        initial_value = 0.0
-        given_size = kwargs.get(f"{name}_size")
-        fixed_value = kwargs.get(f"{name}_fixed")
-        size = self._get_size(given_size, fixed_value)
-        self._register_parameter(name, size, initial_value=initial_value)
-        # prior
-        prior = kwargs.get(
-            f"{name}_prior", NormalPrior(loc=torch.zeros((1, size)), scale=torch.ones((1, size)))
+        size = self._get_size(name, **kwargs)
+        self._init_parameter(
+            name=name,
+            size=size,
+            initial_value=0.0,
+            default_prior=NormalPrior(loc=torch.zeros((1, size)), scale=torch.ones((1, size))),
+            default_constraint=None,
+            **kwargs,
         )
-        self._register_prior(name, prior)
-        # constraint
-        constraint = kwargs.get(f"{name}_constraint")
-        self._register_constraint(name, constraint)
-        # fixed value
-        if fixed_value is not None:
-            self._closure(name, self, fixed_value)
-            getattr(self, f"raw_{name}").requires_grad = False
-        else:
-            self._closure(name, self, initial_value)
 
     @property
     def x_offset(self):
@@ -87,7 +77,7 @@ class InputScale(BaseModule):
               (concentration=2.0, rate=2.0).
             x_scale_constraint (Optional[Interval]): Constraint on x_scale parameter. Defaults to Positive().
             x_scale_fixed (Union[float, torch.Tensor]): Provides the option to use a fixed parameter value.
-              Defaults to None.
+              If not None, gradient computation is deactivated. Defaults to None.
 
         Attributes:
             raw_x_scale (torch.nn.Parameter): Unconstrained parameter tensor.
@@ -95,27 +85,16 @@ class InputScale(BaseModule):
         """
         super().__init__(model, **kwargs)
         name = "x_scale"
-        initial_value = 1.0
-        given_size = kwargs.get(f"{name}_size")
-        fixed_value = kwargs.get(f"{name}_fixed")
-        size = self._get_size(given_size, fixed_value)
-        self._register_parameter(name, size, initial_value=initial_value)
-        # prior
-        prior = kwargs.get(
-            f"{name}_prior",
+        size = self._get_size(name, **kwargs)
+        self._init_parameter(
+            name=name,
+            size=size,
+            initial_value=1.0,
             # mean=1.0, std=0.5
-            GammaPrior(concentration=2.0 * torch.ones((1, size)), rate=2.0 * torch.ones((1, size))),
+            default_prior=GammaPrior(concentration=2.0 * torch.ones((1, size)), rate=2.0 * torch.ones((1, size))),
+            default_constraint=Positive(),
+            **kwargs,
         )
-        self._register_prior(name, prior)
-        # constraint
-        constraint = kwargs.get(f"{name}_constraint", Positive())
-        self._register_constraint(name, constraint)
-        # fixed value
-        if fixed_value is not None:
-            self._closure(name, self, fixed_value)
-            getattr(self, f"raw_{name}").requires_grad = False
-        else:
-            self._closure(name, self, initial_value)
 
     @property
     def x_scale(self):
@@ -184,7 +163,7 @@ class OutputOffset(BaseModule):
             y_offset_prior (Optional[Prior]): Prior on y_offset parameter. Defaults to a Normal distribution.
             y_offset_constraint (Optional[Interval]): Constraint on y_offset parameter. Defaults to None.
             y_offset_fixed (Union[float, torch.Tensor]): Provides the option to use a fixed parameter value.
-              Defaults to None.
+              If not None, gradient computation is deactivated. Defaults to None.
 
         Attributes:
             raw_y_offset (torch.nn.Parameter): Unconstrained parameter tensor.
@@ -192,25 +171,15 @@ class OutputOffset(BaseModule):
         """
         super().__init__(model, **kwargs)
         name = "y_offset"
-        initial_value = 0.0
-        given_size = kwargs.get(f"{name}_size")
-        fixed_value = kwargs.get(f"{name}_fixed")
-        size = self._get_size(given_size, fixed_value)
-        self._register_parameter(name, size, initial_value=initial_value)
-        # prior
-        prior = kwargs.get(
-            f"{name}_prior", NormalPrior(loc=torch.zeros((1, size)), scale=torch.ones((1, size)))
+        size = self._get_size(name, **kwargs)
+        self._init_parameter(
+            name=name,
+            size=size,
+            initial_value=0.0,
+            default_prior=NormalPrior(loc=torch.zeros((1, size)), scale=torch.ones((1, size))),
+            default_constraint=None,
+            **kwargs,
         )
-        self._register_prior(name, prior)
-        # constraint
-        constraint = kwargs.get(f"{name}_constraint")
-        self._register_constraint(name, constraint)
-        # fixed value
-        if fixed_value is not None:
-            self._closure(name, self, fixed_value)
-            getattr(self, f"raw_{name}").requires_grad = False
-        else:
-            self._closure(name, self, initial_value)
 
     @property
     def y_offset(self):
@@ -246,7 +215,7 @@ class OutputScale(BaseModule):
               (concentration=2.0, rate=2.0).
             y_scale_constraint (Optional[Interval]): Constraint on y_scale parameter. Defaults to Positive().
             y_scale_fixed (Union[float, torch.Tensor]): Provides the option to use a fixed parameter value.
-              Defaults to None.
+              If not None, gradient computation is deactivated. Defaults to None.
 
         Attributes:
             raw_y_scale (torch.nn.Parameter): Unconstrained parameter tensor.
@@ -254,27 +223,16 @@ class OutputScale(BaseModule):
         """
         super().__init__(model, **kwargs)
         name = "y_scale"
-        initial_value = 1.0
-        given_size = kwargs.get(f"{name}_size")
-        fixed_value = kwargs.get(f"{name}_fixed")
-        size = self._get_size(given_size, fixed_value)
-        self._register_parameter(name, size, initial_value=initial_value)
-        # prior
-        prior = kwargs.get(
-            f"{name}_prior",
+        size = self._get_size(name, **kwargs)
+        self._init_parameter(
+            name=name,
+            size=size,
+            initial_value=1.0,
             # mean=1.0, std=0.5
-            GammaPrior(concentration=2.0 * torch.ones((1, size)), rate=2.0 * torch.ones((1, size))),
+            default_prior=GammaPrior(concentration=2.0 * torch.ones((1, size)), rate=2.0 * torch.ones((1, size))),
+            default_constraint=Positive(),
+            **kwargs,
         )
-        self._register_prior(name, prior)
-        # constraint
-        constraint = kwargs.get(f"{name}_constraint", Positive())
-        self._register_constraint(name, constraint)
-        # fixed value
-        if fixed_value is not None:
-            self._closure(name, self, fixed_value)
-            getattr(self, f"raw_{name}").requires_grad = False
-        else:
-            self._closure(name, self, initial_value)
 
     @property
     def y_scale(self):
