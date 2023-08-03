@@ -49,7 +49,7 @@ class InputOffset(BaseModule):
 
     @x_offset.setter
     def x_offset(self, value):
-        self._x_offset_closure(self, value)
+        self._closure("x_offset", self, value)
 
     def input_offset(self, x):
         return x + self.x_offset
@@ -102,7 +102,7 @@ class InputScale(BaseModule):
 
     @x_scale.setter
     def x_scale(self, value):
-        self._x_scale_closure(self, value)
+        self._closure("x_scale", self, value)
 
     def input_scale(self, x):
         return self.x_scale * x
@@ -187,7 +187,7 @@ class OutputOffset(BaseModule):
 
     @y_offset.setter
     def y_offset(self, value):
-        self._y_offset_closure(self, value)
+        self._closure("y_offset", self, value)
 
     def output_offset(self, y):
         return y + self.y_offset
@@ -240,7 +240,7 @@ class OutputScale(BaseModule):
 
     @y_scale.setter
     def y_scale(self, value):
-        self._y_scale_closure(self, value)
+        self._closure("y_scale", self, value)
 
     def output_scale(self, y):
         return self.y_scale * y
