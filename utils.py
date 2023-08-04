@@ -42,4 +42,4 @@ def extract_output_transformer(module: BaseModule) -> AffineInputTransform:
     y_scale = torch.ones(1)
     if hasattr(module, "y_scale"):
         y_scale = module.y_scale.detach()
-    return AffineInputTransform(d=len(y_offset), coefficient=y_scale, offset=y_offset)
+    return AffineInputTransform(d=len(y_offset), coefficient=y_scale, offset=y_scale * y_offset)
