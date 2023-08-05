@@ -24,8 +24,8 @@ class InputOffset(ParameterModule):
             x_offset_size (Union[int, Tuple[int]]): Size of the x_offset parameter. Defaults to 1.
             x_offset_value (Union[float, torch.Tensor]): Initial value(s) of the x_offset parameter.
               Defaults to zero(s).
-            x_offset_prior (Optional[Prior]): Prior on x_offset parameter. Defaults to a Normal distribution.
-            x_offset_constraint (Optional[Interval]): Constraint on x_offset parameter. Defaults to None.
+            x_offset_prior (Prior): Prior on x_offset parameter. Defaults to a Normal distribution.
+            x_offset_constraint (Interval): Constraint on x_offset parameter. Defaults to None.
 
         Attributes:
             raw_x_offset (torch.nn.Parameter): Unconstrained parameter tensor.
@@ -75,9 +75,9 @@ class InputScale(ParameterModule):
             x_scale_size (Union[int, Tuple[int]]): Size of the x_scale parameter. Defaults to 1.
             x_scale_value (Union[float, torch.Tensor]): Initial value(s) of the x_scale parameter.
               Defaults to one(s).
-            x_scale_prior (Optional[Prior]): Prior on x_scale parameter. Defaults to a Gamma distribution
+            x_scale_prior (Prior): Prior on x_scale parameter. Defaults to a Gamma distribution
               (concentration=2.0, rate=2.0).
-            x_scale_constraint (Optional[Interval]): Constraint on x_scale parameter. Defaults to Positive().
+            x_scale_constraint (Interval): Constraint on x_scale parameter. Defaults to Positive().
 
         Attributes:
             raw_x_scale (torch.nn.Parameter): Unconstrained parameter tensor.
@@ -164,8 +164,8 @@ class OutputOffset(ParameterModule):
             y_offset_size (Union[int, Tuple[int]]): Size of the y_offset parameter. Defaults to 1.
             y_offset_value (Union[float, torch.Tensor]): Initial value(s) of the y_offset parameter.
               Defaults to zero(s).
-            y_offset_prior (Optional[Prior]): Prior on y_offset parameter. Defaults to a Normal distribution.
-            y_offset_constraint (Optional[Interval]): Constraint on y_offset parameter. Defaults to None.
+            y_offset_prior (Prior): Prior on y_offset parameter. Defaults to a Normal distribution.
+            y_offset_constraint (Interval): Constraint on y_offset parameter. Defaults to None.
 
         Attributes:
             raw_y_offset (torch.nn.Parameter): Unconstrained parameter tensor.
@@ -215,9 +215,9 @@ class OutputScale(ParameterModule):
             y_scale_size (Union[int, Tuple[int]]): Size of the y_scale parameter. Defaults to 1.
             y_scale_value (Union[float, torch.Tensor]): Initial value(s) of the y_scale parameter.
               Defaults to one(s).
-            y_scale_prior (Optional[Prior]): Prior on y_scale parameter. Defaults to a Gamma distribution
+            y_scale_prior (Prior): Prior on y_scale parameter. Defaults to a Gamma distribution
               (concentration=2.0, rate=2.0).
-            y_scale_constraint (Optional[Interval]): Constraint on y_scale parameter. Defaults to Positive().
+            y_scale_constraint (Interval): Constraint on y_scale parameter. Defaults to Positive().
 
         Attributes:
             raw_y_scale (torch.nn.Parameter): Unconstrained parameter tensor.
