@@ -40,10 +40,14 @@ class ParameterModule(BaseModule, ABC):
 
         Keyword Args:
             {parameter_name}_size (Union[int, Tuple[int]]): Size of the named parameter. Defaults to 1.
-            {parameter_name}_value (Optional[Union[[float, torch.Tensor]]): Initial value(s) of the named
-              parameter. Defaults to zero(s).
-            {parameter_name}_prior (Optional[Prior]): Prior on named parameter. Defaults to None.
-            {parameter_name}_constraint (Optional[Interval]): Constraint on named parameter. Defaults to None.
+            {parameter_name}_value (Union[[float, torch.Tensor]): Initial value(s) of the named parameter.
+              Defaults to zero(s).
+            {parameter_name}_prior (Prior): Prior on named parameter. Defaults to None.
+            {parameter_name}_constraint (Interval): Constraint on named parameter. Defaults to None.
+            {parameter_name}_mask (torch.Tensor): Boolean tensor matching the size of the parameter. Allows to
+              select which entries of the unconstrained (raw) parameter are propagated to the constrained
+              representation, other entries are set to their initial values. This allows to exclude parts of the
+              parameter tensor during training. Defaults to None.
 
         Attributes:
             raw_{parameter_name} (torch.nn.Parameter): Unconstrained parameter tensor.
@@ -57,23 +61,16 @@ class ParameterModule(BaseModule, ABC):
                 value=kwargs.get(f"{name}_value", 0.0),
                 prior=kwargs.get(f"{name}_prior"),
                 constraint=kwargs.get(f"{name}_constraint"),
+                mask=kwargs.get(f"{name}_mask", None),
             )
 
-    def _register_parameter(self, name: str, size: Union[int, Tuple[int]], value: Union[float, torch.Tensor]):
+    def _register_parameter(self, name: str, value: torch.Tensor):
         """Registers the named parameter with prefix "raw_" to allow for constraints.
 
         Args:
             name: Name of the parameter.
-            size: Size of the parameter.
-            value: Initial value of the parameter.
+            value: Initial value(s) of the parameter.
         """
-        if not isinstance(value, torch.Tensor):
-            value = float(value) * torch.ones(size)
-        value_size = value.shape
-        if value.dim() == 1:
-            value_size = value.shape[0]
-        if not size == value_size:
-            raise ValueError(f"Initial value tensor does not match given size of {size}!")
         self.register_parameter(f"raw_{name}", torch.nn.Parameter(value))
 
     def _register_prior(self, name: str, prior: Optional[Prior]):
@@ -108,7 +105,10 @@ class ParameterModule(BaseModule, ABC):
         Returns:
             The parameter transformed according to the constraint.
         """
-        raw_parameter = getattr(m, f"raw_{name}")
+        raw_parameter = getattr(m, f"raw_{name}").clone()
+        mask = getattr(m, f"{name}_mask")
+        if mask is not None:
+            raw_parameter[~mask] = getattr(m, f"_{name}_initial_value")[~mask].to(raw_parameter.dtype)
         if hasattr(m, f"raw_{name}_constraint"):
             constraint = getattr(m, f"raw_{name}_constraint")
             return constraint.transform(raw_parameter)
@@ -149,6 +149,7 @@ class ParameterModule(BaseModule, ABC):
             value: Union[float, torch.Tensor],
             prior: Optional[Prior] = None,
             constraint: Optional[Interval] = None,
+            mask: Optional[torch.Tensor] = None,
     ):
         """Initializes the named parameter.
 
@@ -158,8 +159,19 @@ class ParameterModule(BaseModule, ABC):
             value: Initial value of the named parameter.
             prior: Prior on the named parameter.
             constraint: Constraint on the named parameter.
+            mask: Boolean mask applied to the transformation from unconstrained (raw) parameter to the
+              constrained representation.
         """
-        self._register_parameter(name, size, value=value)
+        if not isinstance(value, torch.Tensor):
+            value = float(value) * torch.ones(size)
+        value_size = value.shape
+        if value.dim() == 1:
+            value_size = value.shape[0]
+        if not size == value_size:
+            raise ValueError(f"Initial value tensor does not match given size of {size}!")
+        setattr(self, f"{name}_mask", mask)
+        setattr(self, f"_{name}_initial_value", value)
+        self._register_parameter(name, value)
         self._register_prior(name, prior)
         self._register_constraint(name, constraint)
         self._closure(name, self, value)
