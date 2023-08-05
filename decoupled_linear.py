@@ -118,6 +118,7 @@ class DecoupledLinearInput(InputOffset, InputScale):
             self,
             model: torch.nn.Module,
             x_size: Optional[int] = None,
+            x_mask: Optional[torch.Tensor] = None,
             **kwargs,
     ):
         """Adds decoupled learnable linear input calibration.
@@ -128,6 +129,7 @@ class DecoupledLinearInput(InputOffset, InputScale):
         Args:
             model: The model to be calibrated.
             x_size: Overwrites x_offset_size and x_scale_size.
+            x_mask: Overwrites x_offset_mask and x_scale_mask.
 
         Keyword Args:
             Inherited from InputOffset and InputScale.
@@ -138,6 +140,9 @@ class DecoupledLinearInput(InputOffset, InputScale):
         if x_size is not None:
             kwargs["x_offset_size"] = x_size
             kwargs["x_scale_size"] = x_size
+        if x_mask is not None:
+            kwargs["x_offset_mask"] = x_mask
+            kwargs["x_scale_mask"] = x_mask
         super().__init__(model, **kwargs)
 
     def decoupled_linear_input(self, x: torch.Tensor) -> torch.Tensor:
@@ -258,6 +263,7 @@ class DecoupledLinearOutput(OutputOffset, OutputScale):
             self,
             model: torch.nn.Module,
             y_size: Optional[int] = None,
+            y_mask: Optional[torch.Tensor] = None,
             **kwargs,
     ):
         """Adds decoupled learnable linear output calibration.
@@ -278,6 +284,9 @@ class DecoupledLinearOutput(OutputOffset, OutputScale):
         if y_size is not None:
             kwargs["y_offset_size"] = y_size
             kwargs["y_scale_size"] = y_size
+        if y_mask is not None:
+            kwargs["y_offset_mask"] = y_mask
+            kwargs["y_scale_mask"] = y_mask
         super().__init__(model, **kwargs)
 
     def decoupled_linear_output(self, y: torch.Tensor) -> torch.Tensor:
