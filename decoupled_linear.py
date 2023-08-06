@@ -22,7 +22,9 @@ class InputOffset(ParameterModule):
 
         Keyword Args:
             x_offset_size (Union[int, Tuple[int]]): Size of the x_offset parameter. Defaults to 1.
-            x_offset_value (Union[float, torch.Tensor]): Initial value(s) of the x_offset parameter.
+            x_offset_initial (Union[float, torch.Tensor]): Initial value(s) of the x_offset parameter.
+              Defaults to zero(s).
+            x_offset_default (Union[float, torch.Tensor]): Default value(s) of the x_offset parameter.
               Defaults to zero(s).
             x_offset_prior (Prior): Prior on x_offset parameter. Defaults to a Normal distribution.
             x_offset_constraint (Interval): Constraint on x_offset parameter. Defaults to None.
@@ -33,7 +35,8 @@ class InputOffset(ParameterModule):
         """
         name = "x_offset"
         kwargs[f"{name}_size"] = kwargs.get(f"{name}_size", 1)
-        kwargs[f"{name}_value"] = kwargs.get(f"{name}_value", 0.0)
+        kwargs[f"{name}_initial"] = kwargs.get(f"{name}_initial", 0.0)
+        kwargs[f"{name}_default"] = kwargs.get(f"{name}_default", 0.0)
         tensor_size = kwargs[f"{name}_size"]
         if isinstance(tensor_size, int):
             tensor_size = (1, tensor_size)
@@ -73,7 +76,9 @@ class InputScale(ParameterModule):
 
         Keyword Args:
             x_scale_size (Union[int, Tuple[int]]): Size of the x_scale parameter. Defaults to 1.
-            x_scale_value (Union[float, torch.Tensor]): Initial value(s) of the x_scale parameter.
+            x_scale_initial (Union[float, torch.Tensor]): Initial value(s) of the x_scale parameter.
+              Defaults to one(s).
+            x_scale_default (Union[float, torch.Tensor]): Default value(s) of the x_scale parameter.
               Defaults to one(s).
             x_scale_prior (Prior): Prior on x_scale parameter. Defaults to a Gamma distribution
               (concentration=2.0, rate=2.0).
@@ -85,7 +90,8 @@ class InputScale(ParameterModule):
         """
         name = "x_scale"
         kwargs[f"{name}_size"] = kwargs.get(f"{name}_size", 1)
-        kwargs[f"{name}_value"] = kwargs.get(f"{name}_value", 1.0)
+        kwargs[f"{name}_initial"] = kwargs.get(f"{name}_initial", 1.0)
+        kwargs[f"{name}_default"] = kwargs.get(f"{name}_default", 1.0)
         tensor_size = kwargs[f"{name}_size"]
         if isinstance(tensor_size, int):
             tensor_size = (1, tensor_size)
@@ -167,7 +173,9 @@ class OutputOffset(ParameterModule):
 
         Keyword Args:
             y_offset_size (Union[int, Tuple[int]]): Size of the y_offset parameter. Defaults to 1.
-            y_offset_value (Union[float, torch.Tensor]): Initial value(s) of the y_offset parameter.
+            y_offset_initial (Union[float, torch.Tensor]): Initial value(s) of the y_offset parameter.
+              Defaults to zero(s).
+            y_offset_default (Union[float, torch.Tensor]): Default value(s) of the y_offset parameter.
               Defaults to zero(s).
             y_offset_prior (Prior): Prior on y_offset parameter. Defaults to a Normal distribution.
             y_offset_constraint (Interval): Constraint on y_offset parameter. Defaults to None.
@@ -178,7 +186,8 @@ class OutputOffset(ParameterModule):
         """
         name = "y_offset"
         kwargs[f"{name}_size"] = kwargs.get(f"{name}_size", 1)
-        kwargs[f"{name}_value"] = kwargs.get(f"{name}_value", 0.0)
+        kwargs[f"{name}_initial"] = kwargs.get(f"{name}_initial", 0.0)
+        kwargs[f"{name}_default"] = kwargs.get(f"{name}_default", 0.0)
         tensor_size = kwargs[f"{name}_size"]
         if isinstance(tensor_size, int):
             tensor_size = (1, tensor_size)
@@ -218,7 +227,9 @@ class OutputScale(ParameterModule):
 
         Keyword Args:
             y_scale_size (Union[int, Tuple[int]]): Size of the y_scale parameter. Defaults to 1.
-            y_scale_value (Union[float, torch.Tensor]): Initial value(s) of the y_scale parameter.
+            y_scale_initial (Union[float, torch.Tensor]): Initial value(s) of the y_scale parameter.
+              Defaults to one(s).
+            y_scale_default (Union[float, torch.Tensor]): Default value(s) of the y_scale parameter.
               Defaults to one(s).
             y_scale_prior (Prior): Prior on y_scale parameter. Defaults to a Gamma distribution
               (concentration=2.0, rate=2.0).
@@ -230,7 +241,8 @@ class OutputScale(ParameterModule):
         """
         name = "y_scale"
         kwargs[f"{name}_size"] = kwargs.get(f"{name}_size", 1)
-        kwargs[f"{name}_value"] = kwargs.get(f"{name}_value", 1.0)
+        kwargs[f"{name}_initial"] = kwargs.get(f"{name}_initial", 1.0)
+        kwargs[f"{name}_default"] = kwargs.get(f"{name}_default", 1.0)
         tensor_size = kwargs[f"{name}_size"]
         if isinstance(tensor_size, int):
             tensor_size = (1, tensor_size)

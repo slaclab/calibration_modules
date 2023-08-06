@@ -32,7 +32,7 @@ class ParameterModule(BaseModule, ABC):
             parameter_names: Optional[List[str]],
             **kwargs,
     ):
-        """Abstract module providing the functionality to register parameters with a prior and/or constraint.
+        """Abstract module providing the functionality to register parameters with a prior and constraint.
 
         Args:
             model: The model to be calibrated.
@@ -40,13 +40,15 @@ class ParameterModule(BaseModule, ABC):
 
         Keyword Args:
             {parameter_name}_size (Union[int, Tuple[int]]): Size of the named parameter. Defaults to 1.
-            {parameter_name}_value (Union[[float, torch.Tensor]): Initial value(s) of the named parameter.
+            {parameter_name}_initial (Union[float, torch.Tensor]): Initial value(s) of the named parameter.
+              Defaults to zero(s).
+            {parameter_name}_default (Union[float, torch.Tensor]): Default value(s) of the named parameter.
               Defaults to zero(s).
             {parameter_name}_prior (Prior): Prior on named parameter. Defaults to None.
             {parameter_name}_constraint (Interval): Constraint on named parameter. Defaults to None.
             {parameter_name}_mask (torch.Tensor): Boolean tensor matching the size of the parameter. Allows to
               select which entries of the unconstrained (raw) parameter are propagated to the constrained
-              representation, other entries are set to their initial values. This allows to exclude parts of the
+              representation, other entries are set to their default values. This allows to exclude parts of the
               parameter tensor during training. Defaults to None.
 
         Attributes:
@@ -58,20 +60,21 @@ class ParameterModule(BaseModule, ABC):
             self._initialize_parameter(
                 name=name,
                 size=kwargs.get(f"{name}_size", 1),
-                value=kwargs.get(f"{name}_value", 0.0),
+                initial=kwargs.get(f"{name}_initial", 0.0),
+                default=kwargs.get(f"{name}_default", 0.0),
                 prior=kwargs.get(f"{name}_prior"),
                 constraint=kwargs.get(f"{name}_constraint"),
                 mask=kwargs.get(f"{name}_mask", None),
             )
 
-    def _register_parameter(self, name: str, value: torch.Tensor):
+    def _register_parameter(self, name: str, initial_value: torch.Tensor):
         """Registers the named parameter with prefix "raw_" to allow for constraints.
 
         Args:
             name: Name of the parameter.
-            value: Initial value(s) of the parameter.
+            initial_value: Initial value(s) of the parameter.
         """
-        self.register_parameter(f"raw_{name}", torch.nn.Parameter(value))
+        self.register_parameter(f"raw_{name}", torch.nn.Parameter(initial_value))
 
     def _register_prior(self, name: str, prior: Optional[Prior]):
         """Registers the prior for the named parameter.
@@ -108,7 +111,7 @@ class ParameterModule(BaseModule, ABC):
         raw_parameter = getattr(m, f"raw_{name}").clone()
         mask = getattr(m, f"{name}_mask")
         if mask is not None:
-            raw_parameter[~mask] = getattr(m, f"_{name}_initial_value")[~mask].to(raw_parameter.dtype)
+            raw_parameter[~mask] = getattr(m, f"_{name}_default")[~mask].to(raw_parameter.dtype)
         if hasattr(m, f"raw_{name}_constraint"):
             constraint = getattr(m, f"raw_{name}_constraint")
             return constraint.transform(raw_parameter)
@@ -121,7 +124,7 @@ class ParameterModule(BaseModule, ABC):
         Args:
             name: Name of the parameter.
             m: Module for which the parameter shall be set to the given value.
-            value: Value the parameter shall be set to.
+            value: Value(s) the parameter shall be set to.
         """
         if not torch.is_tensor(value):
             value = torch.as_tensor(value).to(getattr(m, f"raw_{name}"))
@@ -146,7 +149,8 @@ class ParameterModule(BaseModule, ABC):
             self,
             name: str,
             size: Union[int, Tuple[int]],
-            value: Union[float, torch.Tensor],
+            initial: Union[float, torch.Tensor],
+            default: Union[float, torch.Tensor],
             prior: Optional[Prior] = None,
             constraint: Optional[Interval] = None,
             mask: Optional[torch.Tensor] = None,
@@ -156,25 +160,35 @@ class ParameterModule(BaseModule, ABC):
         Args:
             name: Name of the parameter.
             size: Size of the named parameter.
-            value: Initial value of the named parameter.
+            initial: Initial value(s) of the named parameter.
+            default: Default value(s) of the named parameter.
             prior: Prior on the named parameter.
             constraint: Constraint on the named parameter.
             mask: Boolean mask applied to the transformation from unconstrained (raw) parameter to the
               constrained representation.
         """
-        if not isinstance(value, torch.Tensor):
-            value = float(value) * torch.ones(size)
-        value_size = value.shape
-        if value.dim() == 1:
-            value_size = value.shape[0]
-        if not size == value_size:
+        # get initial and default value(s)
+        if not isinstance(initial, torch.Tensor):
+            initial = float(initial) * torch.ones(size)
+        if not isinstance(default, torch.Tensor):
+            default = float(default) * torch.ones(size)
+        initial_size, default_size = initial.shape, default.shape
+        if initial.dim() == 1:
+            initial_size = initial.shape[0]
+        if default.dim() == 1:
+            default_size = default.shape[0]
+        if not size == initial_size:
             raise ValueError(f"Initial value tensor does not match given size of {size}!")
+        if not size == default_size:
+            raise ValueError(f"Default value tensor does not match given size of {size}!")
+        setattr(self, f"_{name}_initial", initial)
+        setattr(self, f"_{name}_default", default)
+        # create parameter
         setattr(self, f"{name}_mask", mask)
-        setattr(self, f"_{name}_initial_value", value)
-        self._register_parameter(name, value)
+        self._register_parameter(name, initial)
         self._register_prior(name, prior)
         self._register_constraint(name, constraint)
-        self._closure(name, self, value)
+        self._closure(name, self, initial)
 
     def forward(self, x):
         raise NotImplementedError()
