@@ -42,7 +42,8 @@ class ParameterModule(BaseModule, ABC):
             {parameter_name}_size (Union[int, Tuple[int]]): Size of the named parameter. Defaults to 1.
             {parameter_name}_initial (Union[float, torch.Tensor]): Initial value(s) of the named parameter.
               Defaults to zero(s).
-            {parameter_name}_default (Union[float, torch.Tensor]): Default value(s) of the named parameter.
+            {parameter_name}_default (Union[float, torch.Tensor]): Default value(s) of the named parameter,
+              corresponding to zero value(s) of the raw parameter to support regularization during training.
               Defaults to zero(s).
             {parameter_name}_prior (Prior): Prior on named parameter. Defaults to None.
             {parameter_name}_constraint (Interval): Constraint on named parameter. Defaults to None.
@@ -99,7 +100,7 @@ class ParameterModule(BaseModule, ABC):
 
     @staticmethod
     def _param(name: str, m: Module) -> Union[torch.nn.Parameter, torch.Tensor]:
-        """Returns the named parameter transformed according to the constraint.
+        """Returns the named parameter transformed according to constraint and default value.
 
         Args:
             name: Name of the parameter.
@@ -111,15 +112,18 @@ class ParameterModule(BaseModule, ABC):
         raw_parameter = getattr(m, f"raw_{name}").clone()
         mask = getattr(m, f"{name}_mask")
         if mask is not None:
-            raw_parameter[~mask] = getattr(m, f"_{name}_default")[~mask].to(raw_parameter.dtype)
+            raw_parameter[~mask] = torch.zeros(torch.count_nonzero(~mask), dtype=raw_parameter.dtype)
         if hasattr(m, f"raw_{name}_constraint"):
             constraint = getattr(m, f"raw_{name}_constraint")
-            return constraint.transform(raw_parameter)
-        return raw_parameter
+            default_offset = constraint.inverse_transform(getattr(m, f"_{name}_default"))
+            return constraint.transform(raw_parameter + default_offset)
+        else:
+            default_offset = getattr(m, f"_{name}_default")
+            return raw_parameter + default_offset
 
     @staticmethod
     def _closure(name: str, m: Module, value: Union[float, torch.Tensor]):
-        """Sets the named parameter of the module to the given value considering the constraint.
+        """Sets the named parameter of the module to the given value considering constraint and default value.
 
         Args:
             name: Name of the parameter.
@@ -130,9 +134,11 @@ class ParameterModule(BaseModule, ABC):
             value = torch.as_tensor(value).to(getattr(m, f"raw_{name}"))
         if hasattr(m, f"raw_{name}_constraint"):
             constraint = getattr(m, f"raw_{name}_constraint")
-            m.initialize(**{f"raw_{name}": constraint.inverse_transform(value)})
+            default_offset = constraint.inverse_transform(getattr(m, f"_{name}_default"))
+            m.initialize(**{f"raw_{name}": constraint.inverse_transform(value) - default_offset})
         else:
-            m.initialize(**{f"raw_{name}": value})
+            default_offset = getattr(m, f"_{name}_default")
+            m.initialize(**{f"raw_{name}": value - default_offset})
 
     @staticmethod
     def _add_parameter_name_to_kwargs(name: str, kwargs: Dict):
