@@ -191,7 +191,7 @@ class ParameterModule(BaseModule, ABC):
         setattr(self, f"_{name}_initial", initial)
         setattr(self, f"_{name}_default", default)
         # create parameter
-        if not isinstance(mask, torch.Tensor):
+        if mask is not None and not isinstance(mask, torch.Tensor):
             mask = torch.as_tensor(mask)
         setattr(self, f"{name}_mask", mask)
         self._register_parameter(name, initial)
