@@ -72,36 +72,6 @@ class ParameterModule(BaseModule, ABC):
                 mask=kwargs.get(f"{name}_mask", None),
             )
 
-    def _register_parameter(self, name: str, initial_value: Tensor):
-        """Registers the named parameter with prefix "raw_" to allow for constraints.
-
-        Args:
-            name: Name of the parameter.
-            initial_value: Initial value(s) of the parameter.
-        """
-        self.register_parameter(f"raw_{name}", nn.Parameter(initial_value))
-
-    def _register_prior(self, name: str, prior: Optional[Prior]):
-        """Registers the prior for the named parameter.
-
-        Args:
-            name: Name of the parameter.
-            prior: Prior to be placed on the parameter.
-        """
-        if prior is not None:
-            self.register_prior(f"{name}_prior", prior, partial(self._param, name),
-                                partial(self._closure, name))
-
-    def _register_constraint(self, name: str, constraint: Optional[Interval]):
-        """Registers the constraint for the named parameter.
-
-        Args:
-            name: Name of the parameter.
-            constraint: Constraint to be placed on the parameter.
-        """
-        if constraint is not None:
-            self.register_constraint(f"raw_{name}", constraint)
-
     @staticmethod
     def _param(name: str, m: Module) -> Union[nn.Parameter, Tensor]:
         """Returns the named parameter transformed according to constraint and default value.
@@ -191,9 +161,12 @@ class ParameterModule(BaseModule, ABC):
         if mask is not None and not isinstance(mask, Tensor):
             mask = torch.as_tensor(mask)
         setattr(self, f"{name}_mask", mask)
-        self._register_parameter(name, getattr(self, f"_{name}_initial"))
-        self._register_prior(name, prior)
-        self._register_constraint(name, constraint)
+        self.register_parameter(f"raw_{name}", nn.Parameter(getattr(self, f"_{name}_initial")))
+        if prior is not None:
+            self.register_prior(f"{name}_prior", prior, partial(self._param, name),
+                                partial(self._closure, name))
+        if constraint is not None:
+            self.register_constraint(f"raw_{name}", constraint)
         self._closure(name, self, getattr(self, f"_{name}_initial").detach().clone())
         # define parameter property
         setattr(self.__class__, name, property(fget=partial(self._param, name),
