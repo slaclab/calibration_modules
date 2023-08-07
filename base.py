@@ -1,4 +1,5 @@
 from abc import ABC
+from functools import partial
 from typing import Dict, List, Optional, Tuple, Union
 
 import torch
@@ -85,8 +86,8 @@ class ParameterModule(BaseModule, ABC):
             prior: Prior to be placed on the parameter.
         """
         if prior is not None:
-            self.register_prior(f"{name}_prior", prior, lambda m: self._param(name, m),
-                                lambda m, value: self._closure(name, m, value))
+            self.register_prior(f"{name}_prior", prior, partial(self._param, name),
+                                partial(self._closure, name))
 
     def _register_constraint(self, name: str, constraint: Optional[Interval]):
         """Registers the constraint for the named parameter.
