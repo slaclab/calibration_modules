@@ -48,6 +48,18 @@ def extract_output_transformer(module: BaseModule) -> AffineInputTransform:
     return AffineInputTransform(d=len(y_offset), coefficient=y_scale, offset=y_scale * y_offset)
 
 
+def extract_transformers(module: BaseModule) -> (AffineInputTransform, AffineInputTransform):
+    """Creates in- and output transformers corresponding to the given calibration module.
+
+    Args:
+        module: The calibration module.
+
+    Returns:
+        The in- and output transformer.
+    """
+    return extract_input_transformer(module), extract_output_transformer(module)
+
+
 def get_decoupled_linear_parameters(
         input_transformer: Optional[AffineInputTransform] = None,
         output_transformer: Optional[AffineInputTransform] = None,
