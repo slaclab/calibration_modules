@@ -48,8 +48,8 @@ class ParameterModule(BaseModule, ABC):
               Defaults to zero(s).
             {parameter_name}_prior (Prior): Prior on named parameter. Defaults to None.
             {parameter_name}_constraint (Interval): Constraint on named parameter. Defaults to None.
-            {parameter_name}_mask (torch.Tensor): Boolean tensor matching the size of the parameter. Allows to
-              select which entries of the unconstrained (raw) parameter are propagated to the constrained
+            {parameter_name}_mask (Union[torch.Tensor, List]): Boolean tensor matching the size of the parameter.
+              Allows to select which entries of the unconstrained (raw) parameter are propagated to the constrained
               representation, other entries are set to their default values. This allows to exclude parts of the
               parameter tensor during training. Defaults to None.
 
@@ -160,7 +160,7 @@ class ParameterModule(BaseModule, ABC):
             default: Union[float, torch.Tensor],
             prior: Optional[Prior] = None,
             constraint: Optional[Interval] = None,
-            mask: Optional[torch.Tensor] = None,
+            mask: Optional[Union[torch.Tensor, List]] = None,
     ):
         """Initializes the named parameter.
 
@@ -191,6 +191,8 @@ class ParameterModule(BaseModule, ABC):
         setattr(self, f"_{name}_initial", initial)
         setattr(self, f"_{name}_default", default)
         # create parameter
+        if not isinstance(mask, torch.Tensor):
+            mask = torch.as_tensor(mask)
         setattr(self, f"{name}_mask", mask)
         self._register_parameter(name, initial)
         self._register_prior(name, prior)
