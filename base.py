@@ -134,8 +134,8 @@ class ParameterModule(BaseModule, ABC):
             m: Module for which the parameter shall be set to the given value.
             value: Value(s) the parameter shall be set to.
         """
-        if not torch.is_tensor(value):
-            value = torch.as_tensor(value).to(getattr(m, f"raw_{name}"))
+        if not isinstance(value, Tensor):
+            value = torch.as_tensor(value)
         if hasattr(m, f"raw_{name}_constraint"):
             constraint = getattr(m, f"raw_{name}_constraint")
             default_offset = constraint.inverse_transform(getattr(m, f"_{name}_default"))
@@ -178,29 +178,23 @@ class ParameterModule(BaseModule, ABC):
               constrained representation.
         """
         # define initial and default value(s)
-        if not isinstance(initial, Tensor):
-            initial = float(initial) * torch.ones(size)
-        if not isinstance(default, Tensor):
-            default = float(default) * torch.ones(size)
-        initial_size, default_size = initial.shape, default.shape
-        if initial.dim() == 1:
-            initial_size = initial.shape[0]
-        if default.dim() == 1:
-            default_size = default.shape[0]
-        if not size == initial_size:
-            raise ValueError(f"Initial value tensor does not match given size of {size}!")
-        if not size == default_size:
-            raise ValueError(f"Default value tensor does not match given size of {size}!")
-        setattr(self, f"_{name}_initial", initial)
-        setattr(self, f"_{name}_default", default)
+        for value, value_str in zip([initial, default], ["initial", "default"]):
+            if not isinstance(value, Tensor):
+                value = float(value) * torch.ones(size)
+            value_size = value.shape
+            if value.dim() == 1 and isinstance(size, int):
+                value_size = value.shape[0]
+            if not value_size == size:
+                raise ValueError(f"Size of {value_str} value tensor is not {size}!")
+            setattr(self, f"_{name}_{value_str}", value)
         # create parameter
         if mask is not None and not isinstance(mask, Tensor):
             mask = torch.as_tensor(mask)
         setattr(self, f"{name}_mask", mask)
-        self._register_parameter(name, initial)
+        self._register_parameter(name, getattr(self, f"_{name}_initial"))
         self._register_prior(name, prior)
         self._register_constraint(name, constraint)
-        self._closure(name, self, initial)
+        self._closure(name, self, getattr(self, f"_{name}_initial").detach().clone())
         # define parameter property
         setattr(self.__class__, name, property(fget=partial(self._param, name),
                                                fset=partial(self._closure, name)))
