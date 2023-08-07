@@ -3,6 +3,7 @@ from functools import partial
 from typing import Dict, List, Optional, Tuple, Union
 
 import torch
+from torch import nn, Tensor
 from gpytorch.priors import Prior
 from gpytorch.module import Module
 from gpytorch.constraints import Interval
@@ -11,7 +12,7 @@ from gpytorch.constraints import Interval
 class BaseModule(Module, ABC):
     def __init__(
             self,
-            model: torch.nn.Module,
+            model: nn.Module,
             **kwargs,
     ):
         """Abstract base module for calibration.
@@ -29,7 +30,7 @@ class BaseModule(Module, ABC):
 class ParameterModule(BaseModule, ABC):
     def __init__(
             self,
-            model: torch.nn.Module,
+            model: nn.Module,
             parameter_names: Optional[List[str]],
             **kwargs,
     ):
@@ -41,22 +42,22 @@ class ParameterModule(BaseModule, ABC):
 
         Keyword Args:
             {parameter_name}_size (Union[int, Tuple[int]]): Size of the named parameter. Defaults to 1.
-            {parameter_name}_initial (Union[float, torch.Tensor]): Initial value(s) of the named parameter.
+            {parameter_name}_initial (Union[float, Tensor]): Initial value(s) of the named parameter.
               Defaults to zero(s).
-            {parameter_name}_default (Union[float, torch.Tensor]): Default value(s) of the named parameter,
+            {parameter_name}_default (Union[float, Tensor]): Default value(s) of the named parameter,
               corresponding to zero value(s) of the raw parameter to support regularization during training.
               Defaults to zero(s).
             {parameter_name}_prior (Prior): Prior on named parameter. Defaults to None.
             {parameter_name}_constraint (Interval): Constraint on named parameter. Defaults to None.
-            {parameter_name}_mask (Union[torch.Tensor, List]): Boolean mask matching the size of the parameter.
+            {parameter_name}_mask (Union[Tensor, List]): Boolean mask matching the size of the parameter.
               Allows to select which entries of the unconstrained (raw) parameter are propagated to the constrained
               representation, other entries are set to their default values. This allows to exclude parts of the
               parameter tensor during training. Defaults to None.
 
         Attributes:
-            raw_{parameter_name} (torch.nn.Parameter): Unconstrained parameter tensor.
-            {parameter_name} (Union[torch.Tensor, torch.nn.Parameter]): Parameter tensor transformed according
-              to constraint and default value.
+            raw_{parameter_name} (nn.Parameter): Unconstrained parameter tensor.
+            {parameter_name} (Union[Tensor, nn.Parameter]): Parameter tensor transformed according to constraint
+              and default value.
         """
         super().__init__(model, **kwargs)
         self.model = model
@@ -71,14 +72,14 @@ class ParameterModule(BaseModule, ABC):
                 mask=kwargs.get(f"{name}_mask", None),
             )
 
-    def _register_parameter(self, name: str, initial_value: torch.Tensor):
+    def _register_parameter(self, name: str, initial_value: Tensor):
         """Registers the named parameter with prefix "raw_" to allow for constraints.
 
         Args:
             name: Name of the parameter.
             initial_value: Initial value(s) of the parameter.
         """
-        self.register_parameter(f"raw_{name}", torch.nn.Parameter(initial_value))
+        self.register_parameter(f"raw_{name}", nn.Parameter(initial_value))
 
     def _register_prior(self, name: str, prior: Optional[Prior]):
         """Registers the prior for the named parameter.
@@ -102,7 +103,7 @@ class ParameterModule(BaseModule, ABC):
             self.register_constraint(f"raw_{name}", constraint)
 
     @staticmethod
-    def _param(name: str, m: Module) -> Union[torch.nn.Parameter, torch.Tensor]:
+    def _param(name: str, m: Module) -> Union[nn.Parameter, Tensor]:
         """Returns the named parameter transformed according to constraint and default value.
 
         Args:
@@ -125,7 +126,7 @@ class ParameterModule(BaseModule, ABC):
             return raw_parameter + default_offset
 
     @staticmethod
-    def _closure(name: str, m: Module, value: Union[float, torch.Tensor]):
+    def _closure(name: str, m: Module, value: Union[float, Tensor]):
         """Sets the named parameter of the module to the given value considering constraint and default value.
 
         Args:
@@ -158,11 +159,11 @@ class ParameterModule(BaseModule, ABC):
             self,
             name: str,
             size: Union[int, Tuple[int]],
-            initial: Union[float, torch.Tensor],
-            default: Union[float, torch.Tensor],
+            initial: Union[float, Tensor],
+            default: Union[float, Tensor],
             prior: Optional[Prior] = None,
             constraint: Optional[Interval] = None,
-            mask: Optional[Union[torch.Tensor, List]] = None,
+            mask: Optional[Union[Tensor, List]] = None,
     ):
         """Initializes the named parameter.
 
@@ -177,9 +178,9 @@ class ParameterModule(BaseModule, ABC):
               constrained representation.
         """
         # define initial and default value(s)
-        if not isinstance(initial, torch.Tensor):
+        if not isinstance(initial, Tensor):
             initial = float(initial) * torch.ones(size)
-        if not isinstance(default, torch.Tensor):
+        if not isinstance(default, Tensor):
             default = float(default) * torch.ones(size)
         initial_size, default_size = initial.shape, default.shape
         if initial.dim() == 1:
@@ -193,7 +194,7 @@ class ParameterModule(BaseModule, ABC):
         setattr(self, f"_{name}_initial", initial)
         setattr(self, f"_{name}_default", default)
         # create parameter
-        if mask is not None and not isinstance(mask, torch.Tensor):
+        if mask is not None and not isinstance(mask, Tensor):
             mask = torch.as_tensor(mask)
         setattr(self, f"{name}_mask", mask)
         self._register_parameter(name, initial)
