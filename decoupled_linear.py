@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import List, Optional, Tuple, Union
 
 import torch
 from gpytorch.priors import Prior, NormalPrior, GammaPrior
@@ -28,6 +28,8 @@ class InputOffset(ParameterModule):
               Defaults to zero(s).
             x_offset_prior (Prior): Prior on x_offset parameter. Defaults to a Normal distribution.
             x_offset_constraint (Interval): Constraint on x_offset parameter. Defaults to None.
+            x_offset_mask (Union[torch.Tensor, List]): Boolean mask for x_offset parameter, allowing to exclude
+              parts of the parameter during training. Defaults to None.
 
         Attributes:
             raw_x_offset (torch.nn.Parameter): Unconstrained parameter tensor.
@@ -83,6 +85,8 @@ class InputScale(ParameterModule):
             x_scale_prior (Prior): Prior on x_scale parameter. Defaults to a Gamma distribution
               (concentration=2.0, rate=2.0).
             x_scale_constraint (Interval): Constraint on x_scale parameter. Defaults to Positive().
+            x_scale_mask (Union[torch.Tensor, List]): Boolean mask for x_scale parameter, allowing to exclude
+              parts of the parameter during training. Defaults to None.
 
         Attributes:
             raw_x_scale (torch.nn.Parameter): Unconstrained parameter tensor.
@@ -179,6 +183,8 @@ class OutputOffset(ParameterModule):
               Defaults to zero(s).
             y_offset_prior (Prior): Prior on y_offset parameter. Defaults to a Normal distribution.
             y_offset_constraint (Interval): Constraint on y_offset parameter. Defaults to None.
+            y_offset_mask (Union[torch.Tensor, List]): Boolean mask for y_offset parameter, allowing to exclude
+              parts of the parameter during training. Defaults to None.
 
         Attributes:
             raw_y_offset (torch.nn.Parameter): Unconstrained parameter tensor.
@@ -234,6 +240,8 @@ class OutputScale(ParameterModule):
             y_scale_prior (Prior): Prior on y_scale parameter. Defaults to a Gamma distribution
               (concentration=2.0, rate=2.0).
             y_scale_constraint (Interval): Constraint on y_scale parameter. Defaults to Positive().
+            y_scale_mask (Union[torch.Tensor, List]): Boolean mask for y_scale parameter, allowing to exclude
+              parts of the parameter during training. Defaults to None.
 
         Attributes:
             raw_y_scale (torch.nn.Parameter): Unconstrained parameter tensor.
