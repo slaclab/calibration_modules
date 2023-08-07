@@ -48,13 +48,15 @@ class ParameterModule(BaseModule, ABC):
               Defaults to zero(s).
             {parameter_name}_prior (Prior): Prior on named parameter. Defaults to None.
             {parameter_name}_constraint (Interval): Constraint on named parameter. Defaults to None.
-            {parameter_name}_mask (Union[torch.Tensor, List]): Boolean tensor matching the size of the parameter.
+            {parameter_name}_mask (Union[torch.Tensor, List]): Boolean mask matching the size of the parameter.
               Allows to select which entries of the unconstrained (raw) parameter are propagated to the constrained
               representation, other entries are set to their default values. This allows to exclude parts of the
               parameter tensor during training. Defaults to None.
 
         Attributes:
             raw_{parameter_name} (torch.nn.Parameter): Unconstrained parameter tensor.
+            {parameter_name} (Union[torch.Tensor, torch.nn.Parameter]): Parameter tensor transformed according
+              to constraint and default value.
         """
         super().__init__(model, **kwargs)
         self.model = model
@@ -174,7 +176,7 @@ class ParameterModule(BaseModule, ABC):
             mask: Boolean mask applied to the transformation from unconstrained (raw) parameter to the
               constrained representation.
         """
-        # get initial and default value(s)
+        # define initial and default value(s)
         if not isinstance(initial, torch.Tensor):
             initial = float(initial) * torch.ones(size)
         if not isinstance(default, torch.Tensor):
@@ -198,6 +200,9 @@ class ParameterModule(BaseModule, ABC):
         self._register_prior(name, prior)
         self._register_constraint(name, constraint)
         self._closure(name, self, initial)
+        # define parameter property
+        setattr(self.__class__, name, property(fget=partial(self._param, name),
+                                               fset=partial(self._closure, name)))
 
     def forward(self, x):
         raise NotImplementedError()

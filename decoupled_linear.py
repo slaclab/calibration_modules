@@ -30,31 +30,19 @@ class InputOffset(ParameterModule):
             x_offset_constraint (Interval): Constraint on x_offset parameter. Defaults to None.
             x_offset_mask (Union[torch.Tensor, List]): Boolean mask for x_offset parameter, allowing to exclude
               parts of the parameter during training. Defaults to None.
-
-        Attributes:
-            raw_x_offset (torch.nn.Parameter): Unconstrained parameter tensor.
-            x_offset (Union[torch.Tensor, torch.nn.Parameter]): Constrained version of raw_x_offset.
         """
-        name = "x_offset"
-        kwargs[f"{name}_size"] = kwargs.get(f"{name}_size", 1)
-        kwargs[f"{name}_initial"] = kwargs.get(f"{name}_initial", 0.0)
-        kwargs[f"{name}_default"] = kwargs.get(f"{name}_default", 0.0)
-        tensor_size = kwargs[f"{name}_size"]
+        parameter_name = "x_offset"
+        kwargs[f"{parameter_name}_size"] = kwargs.get(f"{parameter_name}_size", 1)
+        kwargs[f"{parameter_name}_initial"] = kwargs.get(f"{parameter_name}_initial", 0.0)
+        kwargs[f"{parameter_name}_default"] = kwargs.get(f"{parameter_name}_default", 0.0)
+        tensor_size = kwargs[f"{parameter_name}_size"]
         if isinstance(tensor_size, int):
             tensor_size = (1, tensor_size)
-        kwargs[f"{name}_prior"] = kwargs.get(
-            f"{name}_prior", NormalPrior(loc=torch.zeros(tensor_size), scale=torch.ones(tensor_size))
+        kwargs[f"{parameter_name}_prior"] = kwargs.get(
+            f"{parameter_name}_prior", NormalPrior(loc=torch.zeros(tensor_size), scale=torch.ones(tensor_size))
         )
-        self._add_parameter_name_to_kwargs(name, kwargs)
+        self._add_parameter_name_to_kwargs(parameter_name, kwargs)
         super().__init__(model, **kwargs)
-
-    @property
-    def x_offset(self) -> Union[torch.Tensor, torch.nn.Parameter]:
-        return self._param("x_offset", self)
-
-    @x_offset.setter
-    def x_offset(self, value: Union[float, torch.Tensor]):
-        self._closure("x_offset", self, value)
 
     def input_offset(self, x: torch.Tensor) -> torch.Tensor:
         return x + self.x_offset
@@ -87,34 +75,22 @@ class InputScale(ParameterModule):
             x_scale_constraint (Interval): Constraint on x_scale parameter. Defaults to Positive().
             x_scale_mask (Union[torch.Tensor, List]): Boolean mask for x_scale parameter, allowing to exclude
               parts of the parameter during training. Defaults to None.
-
-        Attributes:
-            raw_x_scale (torch.nn.Parameter): Unconstrained parameter tensor.
-            x_scale (Union[torch.Tensor, torch.nn.Parameter]): Constrained version of raw_x_scale.
         """
-        name = "x_scale"
-        kwargs[f"{name}_size"] = kwargs.get(f"{name}_size", 1)
-        kwargs[f"{name}_initial"] = kwargs.get(f"{name}_initial", 1.0)
-        kwargs[f"{name}_default"] = kwargs.get(f"{name}_default", 1.0)
-        tensor_size = kwargs[f"{name}_size"]
+        parameter_name = "x_scale"
+        kwargs[f"{parameter_name}_size"] = kwargs.get(f"{parameter_name}_size", 1)
+        kwargs[f"{parameter_name}_initial"] = kwargs.get(f"{parameter_name}_initial", 1.0)
+        kwargs[f"{parameter_name}_default"] = kwargs.get(f"{parameter_name}_default", 1.0)
+        tensor_size = kwargs[f"{parameter_name}_size"]
         if isinstance(tensor_size, int):
             tensor_size = (1, tensor_size)
-        kwargs[f"{name}_prior"] = kwargs.get(
+        kwargs[f"{parameter_name}_prior"] = kwargs.get(
             # mean=1.0, std=0.5
-            f"{name}_prior", GammaPrior(concentration=2.0 * torch.ones(tensor_size),
-                                        rate=2.0 * torch.ones(tensor_size))
+            f"{parameter_name}_prior", GammaPrior(concentration=2.0 * torch.ones(tensor_size),
+                                                  rate=2.0 * torch.ones(tensor_size))
         )
-        kwargs[f"{name}_constraint"] = kwargs.get(f"{name}_constraint", Positive())
-        self._add_parameter_name_to_kwargs(name, kwargs)
+        kwargs[f"{parameter_name}_constraint"] = kwargs.get(f"{parameter_name}_constraint", Positive())
+        self._add_parameter_name_to_kwargs(parameter_name, kwargs)
         super().__init__(model, **kwargs)
-
-    @property
-    def x_scale(self) -> Union[torch.Tensor, torch.nn.Parameter]:
-        return self._param("x_scale", self)
-
-    @x_scale.setter
-    def x_scale(self, value: Union[float, torch.Tensor]):
-        self._closure("x_scale", self, value)
 
     def input_scale(self, x: torch.Tensor) -> torch.Tensor:
         return self.x_scale * x
@@ -142,9 +118,6 @@ class DecoupledLinearInput(InputOffset, InputScale):
             x_mask: Overwrites x_offset_mask and x_scale_mask.
 
         Keyword Args:
-            Inherited from InputOffset and InputScale.
-
-        Attributes:
             Inherited from InputOffset and InputScale.
         """
         if x_size is not None:
@@ -185,31 +158,19 @@ class OutputOffset(ParameterModule):
             y_offset_constraint (Interval): Constraint on y_offset parameter. Defaults to None.
             y_offset_mask (Union[torch.Tensor, List]): Boolean mask for y_offset parameter, allowing to exclude
               parts of the parameter during training. Defaults to None.
-
-        Attributes:
-            raw_y_offset (torch.nn.Parameter): Unconstrained parameter tensor.
-            y_offset (Union[torch.Tensor, torch.nn.Parameter]): Constrained version of raw_y_offset.
         """
-        name = "y_offset"
-        kwargs[f"{name}_size"] = kwargs.get(f"{name}_size", 1)
-        kwargs[f"{name}_initial"] = kwargs.get(f"{name}_initial", 0.0)
-        kwargs[f"{name}_default"] = kwargs.get(f"{name}_default", 0.0)
-        tensor_size = kwargs[f"{name}_size"]
+        parameter_name = "y_offset"
+        kwargs[f"{parameter_name}_size"] = kwargs.get(f"{parameter_name}_size", 1)
+        kwargs[f"{parameter_name}_initial"] = kwargs.get(f"{parameter_name}_initial", 0.0)
+        kwargs[f"{parameter_name}_default"] = kwargs.get(f"{parameter_name}_default", 0.0)
+        tensor_size = kwargs[f"{parameter_name}_size"]
         if isinstance(tensor_size, int):
             tensor_size = (1, tensor_size)
-        kwargs[f"{name}_prior"] = kwargs.get(
-            f"{name}_prior", NormalPrior(loc=torch.zeros(tensor_size), scale=torch.ones(tensor_size))
+        kwargs[f"{parameter_name}_prior"] = kwargs.get(
+            f"{parameter_name}_prior", NormalPrior(loc=torch.zeros(tensor_size), scale=torch.ones(tensor_size))
         )
-        self._add_parameter_name_to_kwargs(name, kwargs)
+        self._add_parameter_name_to_kwargs(parameter_name, kwargs)
         super().__init__(model, **kwargs)
-
-    @property
-    def y_offset(self) -> Union[torch.Tensor, torch.nn.Parameter]:
-        return self._param("y_offset", self)
-
-    @y_offset.setter
-    def y_offset(self, value: Union[float, torch.Tensor]):
-        self._closure("y_offset", self, value)
 
     def output_offset(self, y: torch.Tensor) -> torch.Tensor:
         return y + self.y_offset
@@ -242,34 +203,22 @@ class OutputScale(ParameterModule):
             y_scale_constraint (Interval): Constraint on y_scale parameter. Defaults to Positive().
             y_scale_mask (Union[torch.Tensor, List]): Boolean mask for y_scale parameter, allowing to exclude
               parts of the parameter during training. Defaults to None.
-
-        Attributes:
-            raw_y_scale (torch.nn.Parameter): Unconstrained parameter tensor.
-            y_scale (Union[torch.Tensor, torch.nn.Parameter]): Constrained version of raw_y_scale.
         """
-        name = "y_scale"
-        kwargs[f"{name}_size"] = kwargs.get(f"{name}_size", 1)
-        kwargs[f"{name}_initial"] = kwargs.get(f"{name}_initial", 1.0)
-        kwargs[f"{name}_default"] = kwargs.get(f"{name}_default", 1.0)
-        tensor_size = kwargs[f"{name}_size"]
+        parameter_name = "y_scale"
+        kwargs[f"{parameter_name}_size"] = kwargs.get(f"{parameter_name}_size", 1)
+        kwargs[f"{parameter_name}_initial"] = kwargs.get(f"{parameter_name}_initial", 1.0)
+        kwargs[f"{parameter_name}_default"] = kwargs.get(f"{parameter_name}_default", 1.0)
+        tensor_size = kwargs[f"{parameter_name}_size"]
         if isinstance(tensor_size, int):
             tensor_size = (1, tensor_size)
-        kwargs[f"{name}_prior"] = kwargs.get(
+        kwargs[f"{parameter_name}_prior"] = kwargs.get(
             # mean=1.0, std=0.5
-            f"{name}_prior", GammaPrior(concentration=2.0 * torch.ones(tensor_size),
-                                        rate=2.0 * torch.ones(tensor_size))
+            f"{parameter_name}_prior", GammaPrior(concentration=2.0 * torch.ones(tensor_size),
+                                                  rate=2.0 * torch.ones(tensor_size))
         )
-        kwargs[f"{name}_constraint"] = kwargs.get(f"{name}_constraint", Positive())
-        self._add_parameter_name_to_kwargs(name, kwargs)
+        kwargs[f"{parameter_name}_constraint"] = kwargs.get(f"{parameter_name}_constraint", Positive())
+        self._add_parameter_name_to_kwargs(parameter_name, kwargs)
         super().__init__(model, **kwargs)
-
-    @property
-    def y_scale(self) -> Union[torch.Tensor, torch.nn.Parameter]:
-        return self._param("y_scale", self)
-
-    @y_scale.setter
-    def y_scale(self, value: Union[float, torch.Tensor]):
-        self._closure("y_scale", self, value)
 
     def output_scale(self, y: torch.Tensor) -> torch.Tensor:
         return self.y_scale * y
@@ -297,10 +246,7 @@ class DecoupledLinearOutput(OutputOffset, OutputScale):
 
         Keyword Args:
             Inherited from OutputOffset and OutputScale.
-
-        Attributes:
-            Inherited from OutputOffset and OutputScale.
-        """
+       """
         if y_size is not None:
             kwargs["y_offset_size"] = y_size
             kwargs["y_scale_size"] = y_size
@@ -331,9 +277,6 @@ class DecoupledLinear(DecoupledLinearInput, DecoupledLinearOutput):
             model: The model to be calibrated.
 
         Keyword Args:
-            Inherited from DecoupledLinearInput and DecoupledLinearOutput.
-
-        Attributes:
             Inherited from DecoupledLinearInput and DecoupledLinearOutput.
         """
         super().__init__(model, **kwargs)
