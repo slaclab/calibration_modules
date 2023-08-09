@@ -56,11 +56,16 @@ class ParameterModule(BaseModule, ABC):
 
         Attributes:
             raw_{parameter_name} (nn.Parameter): Unconstrained parameter tensor.
-            {parameter_name} (Union[Tensor, nn.Parameter]): Parameter tensor transformed according to constraint
+            {parameter_name} (Union[Tensor]): Parameter tensor transformed according to constraint and
+              default value.
+            calibration_parameter_names (List[str]): List of named parameters.
+            raw_calibration_parameters (List[nn.Parameter]): List of unconstrained parameter tensors.
+            calibration_parameters (List[Tensor]): List of parameter tensors transformed according to constraint
               and default value.
         """
         super().__init__(model, **kwargs)
         self.model = model
+        self.calibration_parameter_names = []
         for name in parameter_names:
             self._initialize_parameter(
                 name=name,
@@ -71,6 +76,21 @@ class ParameterModule(BaseModule, ABC):
                 constraint=kwargs.get(f"{name}_constraint"),
                 mask=kwargs.get(f"{name}_mask", None),
             )
+            self.calibration_parameter_names.append(name)
+
+    @property
+    def raw_calibration_parameters(self) -> List[nn.Parameter]:
+        raw_parameters = []
+        for name in self.calibration_parameter_names:
+            raw_parameters.append(getattr(self, f"raw_{name}"))
+        return raw_parameters
+
+    @property
+    def calibration_parameters(self) -> List[Tensor]:
+        parameters = []
+        for name in self.calibration_parameter_names:
+            parameters.append(getattr(self, f"{name}"))
+        return parameters
 
     @staticmethod
     def _param(name: str, m: Module) -> Union[nn.Parameter, Tensor]:
