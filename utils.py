@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Optional
 
 import torch
 from torch import Tensor
@@ -63,7 +63,7 @@ def extract_transformers(module: BaseModule) -> (AffineInputTransform, AffineInp
 def get_decoupled_linear_parameters(
         input_transformer: Optional[AffineInputTransform] = None,
         output_transformer: Optional[AffineInputTransform] = None,
-) -> Dict[str, Tensor]:
+) -> dict[str, Tensor]:
     """Returns a parameter dictionary corresponding to the given transformers.
 
     The created parameter dictionary can be passed to the decoupled linear calibration modules to reproduce

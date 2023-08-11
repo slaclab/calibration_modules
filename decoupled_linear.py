@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Union
 
 import torch
 from torch import nn, Tensor
@@ -9,14 +9,16 @@ from base import ParameterModule
 
 
 class InputOffset(ParameterModule):
+    """Adds input offset calibration to the model.
+
+    Inputs are offset by a learnable parameter: y = model(x + x_offset).
+    """
     def __init__(
             self,
             model: nn.Module,
             **kwargs,
     ):
-        """Adds learnable input offset calibration.
-
-        Inputs are offset by a learnable parameter: y = model(x + x_offset).
+        """Initializes InputOffset module.
 
         Args:
             model: The model to be calibrated.
@@ -46,6 +48,14 @@ class InputOffset(ParameterModule):
         super().__init__(model, **kwargs)
 
     def input_offset(self, x: Tensor) -> Tensor:
+        """Offsets the given input tensor.
+
+        Args:
+            x: Input tensor.
+
+        Returns:
+            Input tensor with added offset.
+        """
         return x + self.x_offset
 
     def forward(self, x: Tensor) -> Tensor:
@@ -53,14 +63,16 @@ class InputOffset(ParameterModule):
 
 
 class InputScale(ParameterModule):
+    """Adds input scale calibration to the model.
+
+    Inputs are scaled by a learnable parameter: y = model(x_scale * x).
+    """
     def __init__(
             self,
             model: nn.Module,
             **kwargs,
     ):
-        """Adds learnable input scale calibration.
-
-        Inputs are scaled by a learnable parameter: y = model(x_scale * x).
+        """Initializes InputScale module.
 
         Args:
             model: The model to be calibrated.
@@ -94,6 +106,14 @@ class InputScale(ParameterModule):
         super().__init__(model, **kwargs)
 
     def input_scale(self, x: Tensor) -> Tensor:
+        """Scales the given input tensor.
+
+        Args:
+            x: Input tensor.
+
+        Returns:
+            Scaled input tensor.
+        """
         return self.x_scale * x
 
     def forward(self, x: Tensor) -> Tensor:
@@ -101,6 +121,11 @@ class InputScale(ParameterModule):
 
 
 class DecoupledLinearInput(InputOffset, InputScale):
+    """Adds decoupled linear input calibration to the model.
+
+    Inputs are passed through decoupled linear calibration nodes with learnable offset and scaling
+    parameters: y = model(x_scale * (x + x_offset)).
+    """
     def __init__(
             self,
             model: nn.Module,
@@ -108,10 +133,7 @@ class DecoupledLinearInput(InputOffset, InputScale):
             x_mask: Optional[Tensor] = None,
             **kwargs,
     ):
-        """Adds decoupled learnable linear input calibration.
-
-        Inputs are passed through decoupled linear calibration nodes with learnable offset and scaling
-        parameters: y = model(x_scale * (x + x_offset)).
+        """Initializes DecoupledLinearInput module.
 
         Args:
             model: The model to be calibrated.
@@ -130,6 +152,14 @@ class DecoupledLinearInput(InputOffset, InputScale):
         super().__init__(model, **kwargs)
 
     def decoupled_linear_input(self, x: Tensor) -> Tensor:
+        """Offsets and scales the input tensor (in that order).
+
+        Args:
+            x: Input tensor.
+
+        Returns:
+            Scaled input tensor with added offset.
+        """
         return self.input_scale(self.input_offset(x))
 
     def forward(self, x: Tensor) -> Tensor:
@@ -137,14 +167,16 @@ class DecoupledLinearInput(InputOffset, InputScale):
 
 
 class OutputOffset(ParameterModule):
+    """Adds output offset calibration to the model.
+
+    Outputs are offset by a learnable parameter: y = model(x) + y_offset.
+    """
     def __init__(
             self,
             model: nn.Module,
             **kwargs,
     ):
-        """Adds learnable output offset calibration.
-
-        Outputs are offset by a learnable parameter: y = model(x) + y_offset.
+        """Initializes OutputOffset module.
 
         Args:
             model: The model to be calibrated.
@@ -174,6 +206,14 @@ class OutputOffset(ParameterModule):
         super().__init__(model, **kwargs)
 
     def output_offset(self, y: Tensor) -> Tensor:
+        """Offsets the given output tensor.
+
+        Args:
+            y: Output tensor.
+
+        Returns:
+            Output tensor with added offset.
+        """
         return y + self.y_offset
 
     def forward(self, x: Tensor) -> Tensor:
@@ -181,14 +221,16 @@ class OutputOffset(ParameterModule):
 
 
 class OutputScale(ParameterModule):
+    """Adds output scale calibration to the model.
+
+    Outputs are scaled by a learnable parameter: y = y_scale * model(x).
+    """
     def __init__(
             self,
             model: nn.Module,
             **kwargs,
     ):
-        """Adds learnable output scale calibration.
-
-        Outputs are scaled by a learnable parameter: y = y_scale * model(x).
+        """Initializes OutputScale module.
 
         Args:
             model: The model to be calibrated.
@@ -222,6 +264,14 @@ class OutputScale(ParameterModule):
         super().__init__(model, **kwargs)
 
     def output_scale(self, y: Tensor) -> Tensor:
+        """Scales the given output tensor.
+
+        Args:
+            y: Output tensor.
+
+        Returns:
+            Scaled output tensor.
+        """
         return self.y_scale * y
 
     def forward(self, x: Tensor) -> Tensor:
@@ -229,6 +279,11 @@ class OutputScale(ParameterModule):
 
 
 class DecoupledLinearOutput(OutputOffset, OutputScale):
+    """Adds decoupled linear output calibration to the model.
+
+    Outputs are passed through decoupled linear calibration nodes with learnable offset and scaling
+    parameters: y = y_scale * (model(x) + y_offset).
+    """
     def __init__(
             self,
             model: nn.Module,
@@ -236,10 +291,7 @@ class DecoupledLinearOutput(OutputOffset, OutputScale):
             y_mask: Optional[Tensor] = None,
             **kwargs,
     ):
-        """Adds decoupled learnable linear output calibration.
-
-        Outputs are passed through decoupled linear calibration nodes with learnable offset and scaling
-        parameters: y = y_scale * (model(x) + y_offset).
+        """Initializes DecoupledLinearOutput module.
 
         Args:
             model: The model to be calibrated.
@@ -257,6 +309,14 @@ class DecoupledLinearOutput(OutputOffset, OutputScale):
         super().__init__(model, **kwargs)
 
     def decoupled_linear_output(self, y: Tensor) -> Tensor:
+        """Offsets and scales the output tensor (in that order).
+
+        Args:
+            y: Output tensor.
+
+        Returns:
+            Scaled output tensor with added offset.
+        """
         return self.output_scale(self.output_offset(y))
 
     def forward(self, x: Tensor) -> Tensor:
@@ -264,15 +324,17 @@ class DecoupledLinearOutput(OutputOffset, OutputScale):
 
 
 class DecoupledLinear(DecoupledLinearInput, DecoupledLinearOutput):
+    """Adds decoupled linear in- and output calibration to the model.
+
+    In- and outputs are passed through decoupled linear calibration nodes with learnable offset and scaling
+    parameters: y = y_scale * (model(x_scale * (x + x_offset)) + y_offset).
+    """
     def __init__(
             self,
             model: nn.Module,
             **kwargs,
     ):
-        """Adds decoupled learnable linear in- and output calibration.
-
-        In- and outputs are passed through decoupled linear calibration nodes with learnable offset and
-        scaling parameters: y = y_scale * (model(x_scale * (x + x_offset)) + y_offset).
+        """Initializes DecoupledLinear module.
 
         Args:
             model: The model to be calibrated.
