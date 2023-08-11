@@ -1,6 +1,6 @@
-from abc import ABC
 from functools import partial
-from typing import Dict, List, Optional, Tuple, Union
+from abc import ABC, abstractmethod
+from typing import Any, Optional, Union
 
 import torch
 from torch import nn, Tensor
@@ -10,12 +10,13 @@ from gpytorch.constraints import Interval
 
 
 class BaseModule(Module, ABC):
+    """Abstract base module for calibration."""
     def __init__(
             self,
             model: nn.Module,
             **kwargs,
     ):
-        """Abstract base module for calibration.
+        """Initializes BaseModule by registering the model to be calibrated.
 
         Args:
             model: The model to be calibrated.
@@ -23,18 +24,20 @@ class BaseModule(Module, ABC):
         super().__init__()
         self.model = model
 
+    @abstractmethod
     def forward(self, x):
-        raise NotImplementedError()
+        pass
 
 
 class ParameterModule(BaseModule, ABC):
+    """Abstract module providing the functionality to register parameters with a prior and constraint."""
     def __init__(
             self,
             model: nn.Module,
-            parameter_names: Optional[List[str]],
+            parameter_names: Optional[list[str]],
             **kwargs,
     ):
-        """Abstract module providing the functionality to register parameters with a prior and constraint.
+        """Initializes ParameterModule by initializing all named parameters.
 
         Args:
             model: The model to be calibrated.
@@ -64,7 +67,6 @@ class ParameterModule(BaseModule, ABC):
               and default value.
         """
         super().__init__(model, **kwargs)
-        self.model = model
         self.calibration_parameter_names = []
         for name in parameter_names:
             self._initialize_parameter(
@@ -79,14 +81,16 @@ class ParameterModule(BaseModule, ABC):
             self.calibration_parameter_names.append(name)
 
     @property
-    def raw_calibration_parameters(self) -> List[nn.Parameter]:
+    def raw_calibration_parameters(self) -> list[nn.Parameter]:
+        """A list of the raw parameter tensors used for calibration."""
         raw_parameters = []
         for name in self.calibration_parameter_names:
             raw_parameters.append(getattr(self, f"raw_{name}"))
         return raw_parameters
 
     @property
-    def calibration_parameters(self) -> List[Tensor]:
+    def calibration_parameters(self) -> list[Tensor]:
+        """A list of the transformed parameter tensors used for calibration."""
         parameters = []
         for name in self.calibration_parameter_names:
             parameters.append(getattr(self, f"{name}"))
@@ -135,7 +139,13 @@ class ParameterModule(BaseModule, ABC):
             m.initialize(**{f"raw_{name}": value - default_offset})
 
     @staticmethod
-    def _add_parameter_name_to_kwargs(name: str, kwargs: Dict):
+    def _add_parameter_name_to_kwargs(name: str, kwargs: dict[str, Any]):
+        """Adds the given name to the parameter list in kwargs.
+
+        Args:
+            name: Name of the parameter to add.
+            kwargs: Dictionary of keyword arguments.
+        """
         parameter_names = kwargs.get("parameter_names")
         if parameter_names is not None:
             if name in parameter_names:
@@ -148,12 +158,12 @@ class ParameterModule(BaseModule, ABC):
     def _initialize_parameter(
             self,
             name: str,
-            size: Union[int, Tuple[int]],
+            size: Union[int, tuple[int]],
             initial: Union[float, Tensor],
             default: Union[float, Tensor],
             prior: Optional[Prior] = None,
             constraint: Optional[Interval] = None,
-            mask: Optional[Union[Tensor, List]] = None,
+            mask: Optional[Union[Tensor, list]] = None,
     ):
         """Initializes the named parameter.
 
