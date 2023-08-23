@@ -117,7 +117,9 @@ class ParameterModule(BaseModule, ABC):
         mask = getattr(m, f"{name}_mask")
         if mask is not None:
             raw_parameter[~mask] = torch.zeros(
-                torch.count_nonzero(~mask), dtype=raw_parameter.dtype
+                torch.count_nonzero(~mask),
+                dtype=raw_parameter.dtype,
+                device=raw_parameter.device,
             )
         if hasattr(m, f"raw_{name}_constraint"):
             constraint = getattr(m, f"raw_{name}_constraint")
