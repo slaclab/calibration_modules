@@ -80,6 +80,16 @@ class ParameterModule(BaseModule, ABC):
             )
             self.calibration_parameter_names.append(name)
 
+    def __setstate__(self, state):
+        """Defines how to retrieve the class state after unpickling.
+
+        Args:
+            state: The unpickled state.
+        """
+        self.__dict__.update(state)
+        for name in self.calibration_parameter_names:
+            self._register_parameter_property(name)
+
     @property
     def raw_calibration_parameters(self) -> list[nn.Parameter]:
         """A list of the raw parameter tensors used for calibration."""
@@ -198,7 +208,15 @@ class ParameterModule(BaseModule, ABC):
         if constraint is not None:
             self.register_constraint(f"raw_{name}", constraint)
         self._closure(name, self, getattr(self, f"_{name}_initial").detach().clone())
-        # define parameter property
+        # register parameter property
+        self._register_parameter_property(name)
+
+    def _register_parameter_property(self, name):
+        """Registers a class property for the transformed version of the named parameter.
+
+        Args:
+            name: Name of the parameter.
+        """
         setattr(self.__class__, name, property(fget=partial(self._param, name),
                                                fset=partial(self._closure, name)))
 
