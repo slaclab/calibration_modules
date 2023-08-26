@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Union
 
 import torch
 from torch import nn, Tensor
@@ -129,8 +129,8 @@ class DecoupledLinearInput(InputOffset, InputScale):
     def __init__(
             self,
             model: nn.Module,
-            x_size: Optional[int] = None,
-            x_mask: Optional[Tensor] = None,
+            x_size: int = None,
+            x_mask: Tensor = None,
             **kwargs,
     ):
         """Initializes DecoupledLinearInput module.
@@ -287,8 +287,8 @@ class DecoupledLinearOutput(OutputOffset, OutputScale):
     def __init__(
             self,
             model: nn.Module,
-            y_size: Optional[int] = None,
-            y_mask: Optional[Tensor] = None,
+            y_size: int = None,
+            y_mask: Tensor = None,
             **kwargs,
     ):
         """Initializes DecoupledLinearOutput module.

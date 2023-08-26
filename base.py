@@ -1,6 +1,6 @@
 from functools import partial
 from abc import ABC, abstractmethod
-from typing import Any, Optional, Union
+from typing import Any, Union
 
 import torch
 from torch import nn, Tensor
@@ -34,7 +34,7 @@ class ParameterModule(BaseModule, ABC):
     def __init__(
             self,
             model: nn.Module,
-            parameter_names: Optional[list[str]],
+            parameter_names: list[str],
             **kwargs,
     ):
         """Initializes ParameterModule by initializing all named parameters.
@@ -68,6 +68,8 @@ class ParameterModule(BaseModule, ABC):
         """
         super().__init__(model, **kwargs)
         self.calibration_parameter_names = []
+        if parameter_names is None:
+            parameter_names = []
         for name in parameter_names:
             self._initialize_parameter(
                 name=name,
@@ -105,6 +107,61 @@ class ParameterModule(BaseModule, ABC):
         for name in self.calibration_parameter_names:
             parameters.append(getattr(self, f"{name}"))
         return parameters
+
+    def _initialize_parameter(
+            self,
+            name: str,
+            size: Union[int, tuple[int]],
+            initial: Union[float, Tensor],
+            default: Union[float, Tensor],
+            prior: Prior = None,
+            constraint: Interval = None,
+            mask: Union[Tensor, list] = None,
+    ):
+        """Initializes the named parameter.
+
+        Args:
+            name: Name of the parameter.
+            size: Size of the named parameter.
+            initial: Initial value(s) of the named parameter.
+            default: Default value(s) of the named parameter.
+            prior: Prior on the named parameter.
+            constraint: Constraint on the named parameter.
+            mask: Boolean mask applied to the transformation from unconstrained (raw) parameter to the
+              constrained representation.
+        """
+        # define initial and default value(s)
+        for value, value_str in zip([initial, default], ["initial", "default"]):
+            if not isinstance(value, Tensor):
+                value = float(value) * torch.ones(size)
+            value_size = value.shape
+            if value.dim() == 1 and isinstance(size, int):
+                value_size = value.shape[0]
+            if not value_size == size:
+                raise ValueError(f"Size of {value_str} value tensor is not {size}!")
+            setattr(self, f"_{name}_{value_str}", value)
+        # create parameter
+        if mask is not None and not isinstance(mask, Tensor):
+            mask = torch.as_tensor(mask)
+        setattr(self, f"{name}_mask", mask)
+        self.register_parameter(f"raw_{name}", nn.Parameter(getattr(self, f"_{name}_initial")))
+        if prior is not None:
+            self.register_prior(f"{name}_prior", prior, partial(self._param, name),
+                                partial(self._closure, name))
+        if constraint is not None:
+            self.register_constraint(f"raw_{name}", constraint)
+        self._closure(name, self, getattr(self, f"_{name}_initial").detach().clone())
+        # register parameter property
+        self._register_parameter_property(name)
+
+    def _register_parameter_property(self, name):
+        """Registers a class property defining the transformed version of the named parameter.
+
+        Args:
+            name: Name of the parameter.
+        """
+        setattr(self.__class__, name, property(fget=partial(self._param, name),
+                                               fset=partial(self._closure, name)))
 
     @staticmethod
     def _param(name: str, m: Module) -> Union[nn.Parameter, Tensor]:
@@ -164,61 +221,6 @@ class ParameterModule(BaseModule, ABC):
         else:
             parameter_names = [name]
         kwargs["parameter_names"] = parameter_names
-
-    def _initialize_parameter(
-            self,
-            name: str,
-            size: Union[int, tuple[int]],
-            initial: Union[float, Tensor],
-            default: Union[float, Tensor],
-            prior: Optional[Prior] = None,
-            constraint: Optional[Interval] = None,
-            mask: Optional[Union[Tensor, list]] = None,
-    ):
-        """Initializes the named parameter.
-
-        Args:
-            name: Name of the parameter.
-            size: Size of the named parameter.
-            initial: Initial value(s) of the named parameter.
-            default: Default value(s) of the named parameter.
-            prior: Prior on the named parameter.
-            constraint: Constraint on the named parameter.
-            mask: Boolean mask applied to the transformation from unconstrained (raw) parameter to the
-              constrained representation.
-        """
-        # define initial and default value(s)
-        for value, value_str in zip([initial, default], ["initial", "default"]):
-            if not isinstance(value, Tensor):
-                value = float(value) * torch.ones(size)
-            value_size = value.shape
-            if value.dim() == 1 and isinstance(size, int):
-                value_size = value.shape[0]
-            if not value_size == size:
-                raise ValueError(f"Size of {value_str} value tensor is not {size}!")
-            setattr(self, f"_{name}_{value_str}", value)
-        # create parameter
-        if mask is not None and not isinstance(mask, Tensor):
-            mask = torch.as_tensor(mask)
-        setattr(self, f"{name}_mask", mask)
-        self.register_parameter(f"raw_{name}", nn.Parameter(getattr(self, f"_{name}_initial")))
-        if prior is not None:
-            self.register_prior(f"{name}_prior", prior, partial(self._param, name),
-                                partial(self._closure, name))
-        if constraint is not None:
-            self.register_constraint(f"raw_{name}", constraint)
-        self._closure(name, self, getattr(self, f"_{name}_initial").detach().clone())
-        # register parameter property
-        self._register_parameter_property(name)
-
-    def _register_parameter_property(self, name):
-        """Registers a class property for the transformed version of the named parameter.
-
-        Args:
-            name: Name of the parameter.
-        """
-        setattr(self.__class__, name, property(fget=partial(self._param, name),
-                                               fset=partial(self._closure, name)))
 
     def forward(self, x):
         raise NotImplementedError()
