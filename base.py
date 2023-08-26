@@ -34,7 +34,7 @@ class ParameterModule(BaseModule, ABC):
     def __init__(
             self,
             model: nn.Module,
-            parameter_names: list[str],
+            parameter_names: list[str] = None,
             **kwargs,
     ):
         """Initializes ParameterModule by initializing all named parameters.
