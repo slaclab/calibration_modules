@@ -34,7 +34,7 @@ class ParameterModule(BaseModule, ABC):
     def __init__(
             self,
             model: nn.Module,
-            parameter_names: list[str],
+            parameter_names: list[str] = None,
             **kwargs,
     ):
         """Initializes ParameterModule by initializing all named parameters.
@@ -139,7 +139,7 @@ class ParameterModule(BaseModule, ABC):
                 value_size = value.shape[0]
             if not value_size == size:
                 raise ValueError(f"Size of {value_str} value tensor is not {size}!")
-            setattr(self, f"_{name}_{value_str}", value)
+            setattr(self, f"_{name}_{value_str}", value.clone().detach())
         # create parameter
         if mask is not None and not isinstance(mask, Tensor):
             mask = torch.as_tensor(mask)

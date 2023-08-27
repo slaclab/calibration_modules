@@ -5,8 +5,11 @@ channels:
 dependencies:
   - python=3.9
   - botorch>=0.8.2
+
+  # dev
   - ipykernel
   - ipywidgets
   - tqdm
   - pandas
   - matplotlib
+  - pytest
