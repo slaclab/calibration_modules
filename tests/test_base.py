@@ -1,7 +1,11 @@
+import os
+import importlib
+
 import torch
 from gpytorch.priors import NormalPrior
 from gpytorch.constraints import Interval
 
+import base
 from base import ParameterModule
 
 
@@ -13,7 +17,9 @@ def assert_parameter_init(m: ParameterModule, name: str):
     raw_param = getattr(m, f"raw_{name}")
     assert isinstance(raw_param, torch.nn.parameter.Parameter)
     assert raw_param.requires_grad
-    assert torch.isclose(raw_param.data, torch.zeros(raw_param.shape))
+    param_is_default = all(torch.isclose(getattr(m, name), getattr(m, f"_{name}_default")).flatten())
+    if param_is_default:
+        assert all(torch.isclose(raw_param.data, torch.zeros(raw_param.shape)))
     assert (f"raw_{name}", raw_param) in m.named_parameters()
 
 
@@ -113,21 +119,10 @@ class TestParameterModule:
         assert param.shape == ndim_size
         assert raw_param.shape == ndim_size
 
-    def test_parameter_mask(self, linear_model, parameter_name, ndim_size):
-        kwargs = {
-            f"{parameter_name}_size": ndim_size,
-            f"{parameter_name}_default": torch.zeros(ndim_size),
-            f"{parameter_name}_initial": torch.ones(ndim_size),
-            f"{parameter_name}_constraint": Interval(lower_bound=-1.5, upper_bound=1.5),
-            f"{parameter_name}_mask": torch.randint(0, 2, size=ndim_size, dtype=torch.bool),
-        }
-        m = ParameterModule(
-            model=linear_model,
-            parameter_names=[parameter_name],
-            **kwargs,
-        )
-        param = getattr(m, parameter_name)
-        mask = getattr(m, f"{parameter_name}_mask")
+    def test_parameter_mask(self, extensive_parameter_module):
+        parameter_name = extensive_parameter_module.calibration_parameter_names[0]
+        param = extensive_parameter_module.calibration_parameters[0]
+        mask = getattr(extensive_parameter_module, f"{parameter_name}_mask")
 
         assert all(torch.isclose(param[mask], torch.ones(torch.count_nonzero(mask), dtype=param.dtype)))
         assert all(torch.isclose(param[~mask], torch.zeros(torch.count_nonzero(~mask), dtype=param.dtype)))
@@ -141,3 +136,14 @@ class TestParameterModule:
 
         assert parameter_names[0] in kwargs.get("parameter_names")
         assert all(name in kwargs_n.get("parameter_names") for name in parameter_names)
+
+    def test_torch_save_and_load(self, extensive_parameter_module, tmp_path):
+        f = os.path.join(tmp_path, "test_module.pt")
+        torch.save(extensive_parameter_module, f)
+        importlib.reload(base)  # refresh ParameterModule class definition
+        m = torch.load(f)
+        os.remove(f)
+
+        assert str(m.state_dict()) == str(extensive_parameter_module.state_dict())
+        for name in extensive_parameter_module.calibration_parameter_names:
+            assert_parameter_init(m, name)
