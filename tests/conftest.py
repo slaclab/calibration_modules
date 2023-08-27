@@ -7,6 +7,7 @@ from gpytorch.priors import NormalPrior
 from gpytorch.constraints import Interval
 
 from base import ParameterModule
+from decoupled_linear import DecoupledLinear
 
 
 def random_name() -> str:
@@ -56,5 +57,19 @@ def extensive_parameter_module(linear_model, parameter_name, ndim_size) -> Param
         model=linear_model,
         parameter_names=[parameter_name],
         **kwargs,
+    )
+    return m
+
+
+@pytest.fixture(scope="function")
+def one_dim_decoupled_linear_module(linear_model) -> DecoupledLinear:
+    x_offset, x_scale = torch.rand(1), torch.ones(1) + torch.rand(1)
+    y_offset, y_scale = torch.rand(1), torch.ones(1) + torch.rand(1)
+    m = DecoupledLinear(
+        model=linear_model,
+        x_offset_initial=x_offset,
+        x_scale_initial=x_scale,
+        y_offset_initial=y_offset,
+        y_scale_initial=y_scale,
     )
     return m

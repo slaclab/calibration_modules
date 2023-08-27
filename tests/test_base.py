@@ -19,7 +19,7 @@ def assert_parameter_init(m: ParameterModule, name: str):
     assert raw_param.requires_grad
     param_is_default = all(torch.isclose(getattr(m, name), getattr(m, f"_{name}_default")).flatten())
     if param_is_default:
-        assert all(torch.isclose(raw_param.data, torch.zeros(raw_param.shape)))
+        assert all(torch.isclose(raw_param.data, torch.zeros(raw_param.shape)).flatten())
     assert (f"raw_{name}", raw_param) in m.named_parameters()
 
 
