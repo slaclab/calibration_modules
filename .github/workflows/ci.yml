@@ -1,0 +1,27 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+    types: [opened, reopened]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macOS-latest]
+        python-version: ["3.9"]
+    steps:
+    - uses: actions/checkout@v3
+    - uses: conda-incubator/setup-miniconda@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+        miniforge-variant: Mambaforge
+        channels: conda-forge
+        activate-environment: calibration-modules
+        environment-file: environment.yml
+    - name: Run Tests
+      shell: bash -l {0}
+      run: |
+        pytest -v tests
