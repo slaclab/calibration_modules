@@ -30,7 +30,7 @@ class BaseModule(Module, ABC):
         pass
 
     def to(self, device: str):
-        self.model._model.to(device)
+        self.model.to(device)
         super().to(device)
 
 
