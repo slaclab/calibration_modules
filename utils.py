@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 from torch import Tensor
 from botorch.models.transforms.input import AffineInputTransform
@@ -24,7 +22,7 @@ def extract_input_transformer(module: BaseModule) -> AffineInputTransform:
     x_scale = torch.ones(1)
     if hasattr(module, "x_scale"):
         x_scale = module.x_scale.detach().clone()
-    return AffineInputTransform(d=len(x_offset), coefficient=1 / x_scale, offset=-x_offset)
+    return AffineInputTransform(d=len(x_offset), coefficient=1/x_scale, offset=-x_offset)
 
 
 def extract_output_transformer(module: BaseModule) -> AffineInputTransform:
@@ -45,7 +43,7 @@ def extract_output_transformer(module: BaseModule) -> AffineInputTransform:
     y_scale = torch.ones(1)
     if hasattr(module, "y_scale"):
         y_scale = module.y_scale.detach().clone()
-    return AffineInputTransform(d=len(y_offset), coefficient=y_scale, offset=y_scale * y_offset)
+    return AffineInputTransform(d=len(y_offset), coefficient=y_scale, offset=y_scale*y_offset)
 
 
 def extract_transformers(module: BaseModule) -> (AffineInputTransform, AffineInputTransform):
@@ -61,8 +59,8 @@ def extract_transformers(module: BaseModule) -> (AffineInputTransform, AffineInp
 
 
 def get_decoupled_linear_parameters(
-        input_transformer: Optional[AffineInputTransform] = None,
-        output_transformer: Optional[AffineInputTransform] = None,
+        input_transformer: AffineInputTransform = None,
+        output_transformer: AffineInputTransform = None,
 ) -> dict[str, Tensor]:
     """Returns a parameter dictionary corresponding to the given transformers.
 
