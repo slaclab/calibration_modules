@@ -11,10 +11,11 @@ from gpytorch.constraints import Interval
 
 class BaseModule(Module, ABC):
     """Abstract base module for calibration."""
+
     def __init__(
-            self,
-            model: nn.Module,
-            **kwargs,
+        self,
+        model: nn.Module,
+        **kwargs,
     ):
         """Initializes BaseModule by registering the model to be calibrated.
 
@@ -28,14 +29,19 @@ class BaseModule(Module, ABC):
     def forward(self, x):
         pass
 
+    def to(self, device: str):
+        self.model.to(device)
+        super().to(device)
+
 
 class ParameterModule(BaseModule, ABC):
     """Abstract module providing the functionality to register parameters with a prior and constraint."""
+
     def __init__(
-            self,
-            model: nn.Module,
-            parameter_names: list[str] = None,
-            **kwargs,
+        self,
+        model: nn.Module,
+        parameter_names: list[str] = None,
+        **kwargs,
     ):
         """Initializes ParameterModule by initializing all named parameters.
 
@@ -109,14 +115,14 @@ class ParameterModule(BaseModule, ABC):
         return parameters
 
     def _initialize_parameter(
-            self,
-            name: str,
-            size: Union[int, tuple[int]],
-            initial: Union[float, Tensor],
-            default: Union[float, Tensor],
-            prior: Prior = None,
-            constraint: Interval = None,
-            mask: Union[Tensor, list] = None,
+        self,
+        name: str,
+        size: Union[int, tuple[int]],
+        initial: Union[float, Tensor],
+        default: Union[float, Tensor],
+        prior: Prior = None,
+        constraint: Interval = None,
+        mask: Union[Tensor, list] = None,
     ):
         """Initializes the named parameter.
 
@@ -144,10 +150,16 @@ class ParameterModule(BaseModule, ABC):
         if mask is not None and not isinstance(mask, Tensor):
             mask = torch.as_tensor(mask)
         setattr(self, f"{name}_mask", mask)
-        self.register_parameter(f"raw_{name}", nn.Parameter(getattr(self, f"_{name}_initial")))
+        self.register_parameter(
+            f"raw_{name}", nn.Parameter(getattr(self, f"_{name}_initial"))
+        )
         if prior is not None:
-            self.register_prior(f"{name}_prior", prior, partial(self._param, name),
-                                partial(self._closure, name))
+            self.register_prior(
+                f"{name}_prior",
+                prior,
+                partial(self._param, name),
+                partial(self._closure, name),
+            )
         if constraint is not None:
             self.register_constraint(f"raw_{name}", constraint)
         self._closure(name, self, getattr(self, f"_{name}_initial").detach().clone())
@@ -160,8 +172,13 @@ class ParameterModule(BaseModule, ABC):
         Args:
             name: Name of the parameter.
         """
-        setattr(self.__class__, name, property(fget=partial(self._param, name),
-                                               fset=partial(self._closure, name)))
+        setattr(
+            self.__class__,
+            name,
+            property(
+                fget=partial(self._param, name), fset=partial(self._closure, name)
+            ),
+        )
 
     @staticmethod
     def _param(name: str, m: Module) -> Union[nn.Parameter, Tensor]:
@@ -177,14 +194,22 @@ class ParameterModule(BaseModule, ABC):
         raw_parameter = getattr(m, f"raw_{name}").clone()
         mask = getattr(m, f"{name}_mask")
         if mask is not None:
-            raw_parameter[~mask] = torch.zeros(torch.count_nonzero(~mask), dtype=raw_parameter.dtype)
+            raw_parameter[~mask] = torch.zeros(
+                torch.count_nonzero(~mask),
+                dtype=raw_parameter.dtype,
+                device=raw_parameter.device,
+            )
         if hasattr(m, f"raw_{name}_constraint"):
             constraint = getattr(m, f"raw_{name}_constraint")
-            default_offset = constraint.inverse_transform(getattr(m, f"_{name}_default"))
-            return constraint.transform(raw_parameter + default_offset)
+            default_offset = constraint.inverse_transform(
+                getattr(m, f"_{name}_default")
+            )
+            return constraint.transform(
+                raw_parameter + default_offset.to(raw_parameter)
+            )
         else:
             default_offset = getattr(m, f"_{name}_default")
-            return raw_parameter + default_offset
+            return raw_parameter + default_offset.to(raw_parameter.device)
 
     @staticmethod
     def _closure(name: str, m: Module, value: Union[float, Tensor]):
@@ -199,8 +224,12 @@ class ParameterModule(BaseModule, ABC):
             value = torch.as_tensor(value)
         if hasattr(m, f"raw_{name}_constraint"):
             constraint = getattr(m, f"raw_{name}_constraint")
-            default_offset = constraint.inverse_transform(getattr(m, f"_{name}_default"))
-            m.initialize(**{f"raw_{name}": constraint.inverse_transform(value) - default_offset})
+            default_offset = constraint.inverse_transform(
+                getattr(m, f"_{name}_default")
+            )
+            m.initialize(
+                **{f"raw_{name}": constraint.inverse_transform(value) - default_offset}
+            )
         else:
             default_offset = getattr(m, f"_{name}_default")
             m.initialize(**{f"raw_{name}": value - default_offset})
