@@ -31,7 +31,7 @@ class BaseModule(Module, ABC):
 
     def to(self, device: str):
         self.model.to(device)
-        super().to(device)
+        return super().to(device)
 
 
 class ParameterModule(BaseModule, ABC):

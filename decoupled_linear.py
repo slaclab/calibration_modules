@@ -5,8 +5,10 @@ from torch import nn, Tensor
 from gpytorch.priors import Prior, NormalPrior, GammaPrior
 from gpytorch.constraints import Interval, Positive
 
-from base import ParameterModule
-
+try:
+    from base import ParameterModule
+except (ImportError, ModuleNotFoundError):
+    from .base import ParameterModule
 
 class InputOffset(ParameterModule):
     """Adds input offset calibration to the model.
