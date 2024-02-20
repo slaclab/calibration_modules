@@ -2,7 +2,10 @@ import torch
 from torch import Tensor
 from botorch.models.transforms.input import AffineInputTransform
 
-from base import BaseModule
+try:
+    from base import BaseModule
+except (ImportError, ModuleNotFoundError):
+    from .base import BaseModule
 
 
 def extract_input_transformer(module: BaseModule) -> AffineInputTransform:
