@@ -141,7 +141,7 @@ class TestParameterModule:
         f = os.path.join(tmp_path, "test_module.pt")
         torch.save(extensive_parameter_module, f)
         importlib.reload(base)  # refresh ParameterModule class definition
-        m = torch.load(f)
+        m = torch.load(f, weights_only=False)
         os.remove(f)
 
         assert str(m.state_dict()) == str(extensive_parameter_module.state_dict())
