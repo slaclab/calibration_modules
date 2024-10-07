@@ -119,6 +119,26 @@ class TestParameterModule:
         assert param.shape == ndim_size
         assert raw_param.shape == ndim_size
 
+    def test_parameter_lists(self, linear_model, parameter_name, ndim_size):
+        parameter_prior = NormalPrior(loc=torch.zeros(ndim_size), scale=torch.ones(ndim_size))
+        kwargs = {
+            f"{parameter_name}_size": ndim_size,
+            f"{parameter_name}_default": torch.ones(ndim_size).tolist(),
+            f"{parameter_name}_initial": torch.ones(ndim_size).tolist(),
+            f"{parameter_name}_prior": parameter_prior,
+            f"{parameter_name}_constraint": Interval(lower_bound=-1.5, upper_bound=1.5),
+        }
+        m = ParameterModule(
+            model=linear_model,
+            parameter_names=[parameter_name],
+            **kwargs,
+        )
+        param = getattr(m, parameter_name)
+        raw_param = getattr(m, f"raw_{parameter_name}")
+
+        assert param.shape == ndim_size
+        assert raw_param.shape == ndim_size
+
     def test_parameter_mask(self, extensive_parameter_module):
         parameter_name = extensive_parameter_module.calibration_parameter_names[0]
         param = extensive_parameter_module.calibration_parameters[0]
