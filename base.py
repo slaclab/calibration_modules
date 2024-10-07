@@ -139,7 +139,10 @@ class ParameterModule(BaseModule, ABC):
         # define initial and default value(s)
         for value, value_str in zip([initial, default], ["initial", "default"]):
             if not isinstance(value, Tensor):
-                value = float(value) * torch.ones(size)
+                if isinstance(value, list):
+                    value = torch.tensor(value)
+                else:
+                    value = float(value) * torch.ones(size)
             value_size = value.shape
             if value.dim() == 1 and isinstance(size, int):
                 value_size = value.shape[0]
